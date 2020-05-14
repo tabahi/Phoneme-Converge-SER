@@ -1,0 +1,7 @@
+Archive/
+cache/
+data/
+Clustering_plots/
+**/__pycache__/
+results.csv
+notes.txt

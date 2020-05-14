@@ -1,0 +1,26 @@
+{
+    "cSpell.words": [
+        "Fread",
+        "LMSO",
+        "LOSO",
+        "ceps",
+        "childs",
+        "dists",
+        "dset",
+        "nopython",
+        "returno",
+        "segs",
+        "stds",
+        "uint",
+        "ulabels"
+    ],
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext",
+        "python"
+    ]
+}
