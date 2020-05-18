@@ -3,5 +3,7 @@ cache/
 data/
 Clustering_plots/
 **/__pycache__/
-results.csv
 notes.txt
+*.csv
+results/
+expreriments.py

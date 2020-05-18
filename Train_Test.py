@@ -2,7 +2,6 @@ import numpy as np
 #import scipy.io.wavfile
 import matplotlib.pyplot as plt
 import scipy.io
-from timeit import default_timer as timer
 import os
 
 
@@ -117,27 +116,40 @@ def split_train_n_test(features, labels, scheme='single-random', test_size=0.2, 
     return features_train, labels_train, features_test, labels_test
 
 
-def save_results_csv(results_csv, db_names, classifier_name, uar, war, scheme, K_SD, features_count, Nm_inst, Nm_diff, g_dist, window_length, window_step, emphasize_ratio, classes_n, speakers_n, samples, confusion):
+def save_results_csv(results_csv, db_names, classifier_name, uar, war, scheme, test_size, folds_n, K_SD, features_count, Nm_inst, Nm_diff, g_dist, window_length, window_step, emphasize_ratio, classes_n, speakers_n, samples, confusion):
     import csv
 
     import os
-    if(os.path.isfile(results_csv)==False):
-        with open(results_csv, 'w') as csvFile:
-            writer = csv.writer(csvFile, delimiter=',', lineterminator = '\n')
-            writer.writerow("db_names, classifier, UAR, WAR, scheme, K_SD, features_count, Nm_inst, Nm_diff, g_dist, window_length, window_step, emphasize_ratio, classes_n, speakers_n, samples, confusion")
+    if not os.path.exists('results'):
+        os.makedirs('results')
+    if(os.path.isfile("results\\" + results_csv)==False):
+        with open("results\\" + results_csv, 'w') as csvFile:
+            csvFile.write("db_names, classifier, UAR, WAR, scheme, test_size, folds_n, K_SD, features_count, Nm_inst, Nm_diff, g_dist, window_length, window_step, emphasize_ratio, classes_n, speakers_n, samples, confusion\n")
 
-    with open(results_csv, 'a') as csvFile:
+    with open("results\\" + results_csv, 'a') as csvFile:
         writer = csv.writer(csvFile, delimiter=',', lineterminator = '\n')
         #writer.writerow(["Emotion", "Combination", "Occurrences"])
-        this_row = [db_names, classifier_name, str(uar), str(war), scheme, str(K_SD), 
+        this_row = [db_names, classifier_name, str(uar), str(war), scheme, str(test_size), str(folds_n), str(K_SD), 
                 str(features_count), str(Nm_inst), str(Nm_diff),
                 str(g_dist), str(window_length*1000), str(window_step*1000), str(emphasize_ratio), 
                 str(classes_n), str(speakers_n), str(samples), str(confusion)]
 
 
         writer.writerow(this_row)
-        
-def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', test_size=0.2, folds_n=5, test_speakers=5, Nm_inst=[32, 64], Nm_diff=[32, 64], K_SD=0, g_dist=8, window_length=0.025, window_step=0.01, emphasize_ratio=0.65, deselect_labels=None, db_names_paths_2=None):
+
+def make_formants_filename(db_name, window_length, window_step, emphasize_ratio, norm):
+    if not os.path.exists('data'):
+        os.makedirs('data')
+    return 'data\\Formants_' + db_name + '_'  + str(int(window_length*1000)) + '_' + str(int(window_step*1000)) + '_' + str(int(emphasize_ratio*1000)) + '_' + str(norm) + '.hdf'
+
+def make_model_filename(DB_names, val_scheme, test_size, folds_n, test_speakers, K_SD, Nm_inst, Nm_diff, g_dist, window_length, window_step, emphasize_ratio, norm):
+    if not os.path.exists('data'):
+        os.makedirs('data')
+    return "data\\model_" + DB_names + "_" + str(val_scheme) + str(test_size)+ "_"+ str(folds_n) + "_"+ str(test_speakers) +"_" + str(K_SD) + "_" + "I".join(str(x) for x in Nm_inst) + "D".join(str(x) for x in Nm_diff) + str(g_dist) + str(window_length) + str(window_step) + str(emphasize_ratio)+ '_' + str(norm)+ ".pkl"
+
+
+
+def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', test_size=0.2, folds_n=5, test_speakers=5, Nm_inst=[32, 64], Nm_diff=[32, 64], K_SD=0, g_dist=8, window_length=0.025, window_step=0.01, emphasize_ratio=0.65, norm=0, deselect_labels=None, db_names_paths_2=None):
     '''
     Run training and testing functions with the set parameters
 
@@ -165,6 +177,10 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
 
     `g_dist`: unsigned int, optional (default=8). Number for adjacent frames for measuring the change in formant features to calculate differential phoneme features.
     
+    `emphasize_ratio`: float, optional (default=0.7). Amplitude increasing factor for pre-emphasis of higher frequencies (high frequencies * emphasize_ratio = balanced amplitude as low frequencies).
+
+    `norm`: int, optional, (default=0), Enable or disable normalization of Mel-filters.
+
     `deselect_labels`: list of chars, optional (default=None). Example: deselect_labels=['F', 'B'] to deselect 'F'and 'B'.
 
     `db_names_paths_2`: Dict list of of test DBs, shape: [{'DB':'<db_name>', 'path': '<dir_path>'},], optional (default=None). Same as 'db_names_paths', but only required for 'cross-corpus' validation scheme.
@@ -182,23 +198,22 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
     
     DB_names = ".".join([db_names_paths[x]['DB'][0:4] for x in range(0, len(db_names_paths))])
 
-    if not os.path.exists('data'):
-        os.makedirs('data')
+    
 
     # Create the model filename using all the parameters.
-    models_save_file = "data\\model_" + DB_names + "_" + str(val_scheme) + str(test_size)+ "_"+ str(folds_n) + "_"+ str(test_speakers) +"_" + str(K_SD) + "_" + "I".join(str(x) for x in Nm_inst) + "D".join(str(x) for x in Nm_diff) + str(g_dist) + str(window_length) + str(window_step) + str(emphasize_ratio)+ ".pkl"
+    models_save_file = make_model_filename(DB_names, val_scheme, test_size, folds_n, test_speakers, K_SD, Nm_inst, Nm_diff, g_dist, window_length, window_step, emphasize_ratio, norm)
+
     
     
     #check if features are already extracted
     for db_name_path in db_names_paths:
         #HDF storage file path in which formant characteristics are stored
-        features_HDF_file = 'data\\Formants_' + db_name_path['DB'] + '_'  + str(int(window_length*1000)) + '_' + str(int(window_step*1000)) + '_' + str(int(emphasize_ratio*1000)) + '.hdf'
+        features_HDF_file = make_formants_filename(db_name_path['DB'], window_length, window_step, emphasize_ratio, norm)
 
-        
         if (os.path.isfile(features_HDF_file)==False) or (int(os.path.getsize(features_HDF_file))<8000):
             array_of_clips = SER_DB.create_DB_file_objects(db_name_path['DB'], db_name_path['path'])
             #Extract and save formant features of clips in array to an HDF file along with labels (labels are included in file_objects)
-            processed_n = Extract_formants(array_of_clips, features_HDF_file, window_length, window_step, emphasize_ratio, f0_min=30, f0_max=4000, max_frames=800, formants=3)
+            processed_n = Extract_formants(array_of_clips, features_HDF_file, window_length, window_step, emphasize_ratio, norm, f0_min=30, f0_max=4000, max_frames=800, formants=3)
             if(processed_n==0):
                 raise Exception("No files to process. Make sure DB directory path and filenames are in the correct format.")
         
@@ -215,7 +230,8 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
     if(val_scheme=='cross-corpus'):
         if(len(db_names_paths_2)>0):
             for db_name_path in db_names_paths_2:
-                features_HDF_file = 'data\\Formants_' + db_name_path['DB'] + '_'  + str(int(window_length*1000)) + '_' + str(int(window_step*1000)) + '_' + str(int(emphasize_ratio*1000)) + '.hdf'
+                features_HDF_file = make_formants_filename(db_name_path['DB'], window_length, window_step, emphasize_ratio, norm)
+
                 if (os.path.isfile(features_HDF_file)==False) or (int(os.path.getsize(features_HDF_file))<8000):
                     array_of_clips = SER_DB.create_DB_file_objects(db_name_path['DB'], db_name_path['path'])
                     processed_n = Extract_formants(array_of_clips, features_HDF_file, window_length, window_step, emphasize_ratio, f0_min=30, f0_max=4000, max_frames=800, formants=3)
@@ -226,7 +242,8 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
             print("Train set labels:", [chr(x) for x in u_classes])
             #HDFread.print_database_stats(labels1)
             print("Test set labels:", [chr(x) for x in u_classes])
-            DB_names += ".Test:".join([db_names_paths_2[x]['DB'][0:4] for x in range(0, len(db_names_paths_2))])
+            DB_names += "_"
+            DB_names += ".".join([db_names_paths_2[x]['DB'][0:4] for x in range(0, len(db_names_paths_2))])
         else:
             raise Exception ("Missing argument 'db_names_paths_2'")
 
@@ -271,7 +288,7 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
         print(folds_results[0][c]['classifier'], "\tUAR:", folds_results[0][c]['UAR'], " WAR:", folds_results[0][c]['WAR'], "\tTested samples:", samples)
         
         if(results_csv!=None):
-            save_results_csv(results_csv, DB_names, folds_results[0][c]['classifier'], folds_results[0][c]['UAR'], folds_results[0][c]['WAR'], val_scheme, K_SD, features_count, Nm_inst, Nm_diff, g_dist, window_length, window_step, emphasize_ratio, len(u_classes), len(u_speakers), samples, sum_conf)
+            save_results_csv(results_csv, DB_names, folds_results[0][c]['classifier'], folds_results[0][c]['UAR'], folds_results[0][c]['WAR'], val_scheme, test_size, folds_n, K_SD, features_count, Nm_inst, Nm_diff, g_dist, window_length, window_step, emphasize_ratio, len(u_classes), len(u_speakers), samples, sum_conf)
 
     print("Finished 'run_train_and_test' for DB", DB_names)
 
@@ -281,13 +298,14 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
 
 
 
-
 def main():
 
     #Few parameters:
     pt = [16, 32, 64, 128]  #total phoneme clusters, add more than one integer to this list to create multiple models
-    K_SD = 0.0              #float, -1 to +1, feature selection parameters, less K_SD selects more featues
+    K_SD = 0              #float, -1 to +1, feature selection parameters, less K_SD selects more featues
+    norm = 0            #Normalization of mel-filter banks
 
+    
     # List of DB names and directory where wav files are stored:
     db_names_paths = [{'DB': "EmoDB", 'path' : "C:\\DB\\EMO-DB\\wav\\"},]
     # Can add more than one DBs to the list
@@ -301,23 +319,23 @@ def main():
     {'DB': "DEMoS", 'path' : "C:\\DB\\wav_DEMoS\\DEMOS\\"}
     '''
     
-    run_train_and_test(db_names_paths, "results.csv", val_scheme='single-random', test_size=0.20, folds_n=5, Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=6, window_length=0.025, window_step=0.010, emphasize_ratio=0.65, deselect_labels=None)
+    run_train_and_test(db_names_paths, "results.csv", val_scheme='k-folds', test_size=0.2, folds_n=5, Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=6, window_length=0.025, window_step=0.010, emphasize_ratio=0.65, norm=norm, deselect_labels=None)
+
+    exit()
 
     
-
-    '''
     # For cross-corpus validation:
     # Training sets:
-    db_names_paths = [{'DB': "IEMOCAP", 'path' : "C:\\DB\\IEMOCAP_noVideo\\"},]
+    db_names_paths = [{'DB': "RAVDESS", 'path' : "C:\\DB\\RAVDESS_COPY2\\"},]
 
     #Testing sets
-    db_names_paths_2 = [ {'DB': "EmoDB", 'path' : "C:\\DB\\EMO-DB\\wav\\"},]
+    db_names_paths_2 = [{'DB': "IEMOCAP", 'path' : "C:\\DB\\IEMOCAP_noVideo\\"},]
 
     
     deselect_labels=['D','F','U','E','R', 'C', 'G', 'B']
 
-    run_train_and_test(db_names_paths, "results.csv", val_scheme='cross-corpus', Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=8, window_length=0.025, window_step=0.01, emphasize_ratio=0.65, deselect_labels=deselect_labels, db_names_paths_2=db_names_paths_2)
-    '''
+    run_train_and_test(db_names_paths, "results.csv", val_scheme='cross-corpus', Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=6, window_length=0.025, window_step=0.01, emphasize_ratio=0.65, norm=norm, deselect_labels=deselect_labels, db_names_paths_2=db_names_paths_2)
+    
 
     
 
@@ -330,3 +348,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
