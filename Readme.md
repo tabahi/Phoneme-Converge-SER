@@ -4,13 +4,14 @@
 Includes [formantfeatures](https://github.com/tabahi/formantfeatures)  — forked from:
 <https://github.com/tabahi/formantfeatures>
 
+This code uses Scikit-learn's K-mean and generic classifiers to learn the emotional classification of speech clips. First, the formant characteristics [(extracted using formantfeatures)](https://github.com/tabahi/formantfeatures) are used to create cluster's of similar phonemes. Then SVM is trained to classify clips' emotions using the phoneme (cluster label) occurence rates as input.
+
+Version: Origin-2020-05-14-b
 
 ## SER model training
 Training function `PhonemeSER.Train_model()` uses [K-means clustering (scikit-learn)](https://scikit-learn.org/stable/modules/clustering.html#k-means) to label the similar phonological units as the same phonemes. Then phoneme occurrences in whole DB are counted for each clip and occurrence rate is used to train [classifiers](https://scikit-learn.org/stable/modules/svm.html#svm-classification).
 
 Once the model is trained and saved to a file, it can be tested by passing the testing set to `PhonemeSER.Test_model()`
-
-
 
 ------------
 
@@ -28,13 +29,13 @@ Once the model is trained and saved to a file, it can be tested by passing the t
 
 -------
 
-[See SER_Datasets_Import module for reading database directory in their relevant filename formants.](https://github.com/tabahi/SER_Datasets_Import)
+[See SER_Datasets_Import module for reading database directory in their relevant filename formats.](https://github.com/tabahi/SER_Datasets_Import)
  Extract formant features and save to an HDF database by passing the DB name and path to `Extract_files_formant_features`:
 
 ```python
 list_of_clips = SER_Datasets_Libs.SER_DB.create_DB_file_objects("DB_NAME", "C:/DB/path")
 
- processed_n = FormantsLib.FormantsExtract.Extract_files_formant_features(list_of_clips, "formants_filename.hdf", window_length=0.025, window_step=0.01, f0_min=30, f0_max=4000, max_frames=800, formants=3)
+processed_n = FormantsLib.FormantsExtract.Extract_files_formant_features(list_of_clips, "formants_filename.hdf", window_length=0.025, window_step=0.01, f0_min=30, f0_max=4000, max_frames=800, formants=3)
 ```
 
 
@@ -42,7 +43,8 @@ list_of_clips = SER_Datasets_Libs.SER_DB.create_DB_file_objects("DB_NAME", "C:/D
 Once formant features are extracted and saved to HDF they can be imported again to train the model:
 
 ```python
-features, labels, u_speakers, u_classes  = HDFread.import_mutiple_HDFs("formants_filename.hdf", deselect_labels=['C', 'D', 'F', 'U', 'E', 'R', 'G', 'B'])
+features, labels, u_speakers, u_classes  = HDFread.import_mutiple_HDFs(['formants_filename.hdf', 'file2.hdf', 'file3.hdf'], deselect_labels=['C', 'D', 'F', 'U', 'E', 'R', 'G', 'B'])
+# multiple HDF files can be imported at once into the same numpy array - To import separately, call this function separately or call import_features_from_HDF
 ```
 
 
@@ -68,7 +70,7 @@ def Train_model(models_save_file, X_formants_train=features, Y_labels_train=labe
 
 `inst_phoneme_types`: array-like, dtype=int16, shape = [n_models], optional (default=[16, 32, 64]). Cluster numbers for instantaneous (~25ms) phoneme clustering model. Set between 8 to 300 for each cluster model.
 
-`diff_phoneme_types`:  array-like, dtype=int16, shape = [n_models], optional (default=[16, 32, 64]). Cluster numbers for differential phoneme (~25ms * g_dist) clustering models. Set between 8 to 300 for each cluster model.
+`diff_phoneme_types`:  array-like, dtype=int16, shape = [n_models], optional (default=[16, 32, 64]). Cluster numbers for differential phoneme (~10ms * g_dist) clustering models. Set between 8 to 300 for each cluster model.
 
 `K_SD`: float, optional (default=0.0). Feature selection parameters. Set between -1 to 1. It sets the limit of standard deviation below the mean for selecting features within this threshold. Lower value selects more features.
 
@@ -133,7 +135,7 @@ with respective directory paths of the DB wav files. Importing of each DB is pro
 
 `Nm_inst`: array-like, dtype=int16, shape = [n_models], optional (default=[32, 64]). Cluster numbers for instantaneous (~25ms) phoneme clustering model. Set between 8 and 300 for each cluster model.
 
-`Nm_diff`: array-like, dtype=int16, shape = [n_models], optional (default=[32, 64]). Cluster numbers for differential phoneme (~25ms * g_dist) clustering models. Set between 8 and 300 for each cluster model.
+`Nm_diff`: array-like, dtype=int16, shape = [n_models], optional (default=[32, 64]). Cluster numbers for differential phoneme (~10ms * g_dist) clustering models. Set between 8 and 300 for each cluster model.
 
 `K_SD`: float, optional (default=0.0). Feature selection parameters. Set between -1 to 1. It sets the limit of standard deviation below the mean for selecting features within this threshold. Lower value selects more features.
 
@@ -166,7 +168,7 @@ model_file = "data/model_file.pkl"
 PhonemeSER.Test_model_wav_file(model_file, test_wav)
 '''
 Output:
-Classifier : Label
+Classifier, Label
 SVC1 H
 SVC2 H
 SVC3 H
@@ -182,3 +184,6 @@ Done
 '''
 ```
 ------------------
+
+## Collaboration
+Collaborations, issues and improvements are welcome. Currently, we are working on an RNN model to detect the recurrent patterns of phonemes in the wild. The major update will be forked into a separate branch from this (origin) model.
