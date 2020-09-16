@@ -1,5 +1,3 @@
-import numpy as np
-
 """
 -----
 Author: Abdul Rehman
@@ -30,11 +28,14 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
+import numpy as np
+
+
 class Ix(object):
     '''
     Clip label indices for enumeration - Ignore
     '''
-    speaker_id, accent, sex, emotion, intensity, statement, repetition, frame_count, signal_len, trimmed_len, file_size =0,1,2,3,4,5,6,7,8,9,10
+    speaker_id, scenario, sex, emotion, intensity, statement, repetition, frame_count, signal_len, trimmed_len, file_size =0,1,2,3,4,5,6,7,8,9,10
     
 
 def print_database_stats(labels):
@@ -113,7 +114,7 @@ def import_features_from_HDF(storage_file, deselect_labels=None):
     lbl = np.array(hf.get('labels'))
     formant_features = np.array(hf.get('features'))
 
-    conditions =  (lbl[:, Ix.accent]==1) #RAVDESS has 2 accents (1=speech, 2=song), select only speech.
+    conditions =  (lbl[:, Ix.scenario]==1) #RAVDESS has 2 scenarios (1=speech, 2=song), select only speech.
     
     if(len(deselect_labels) > 0):
         for em in deselect_labels:
@@ -151,6 +152,9 @@ def import_mutiple_HDFs(storage_files, deselect_labels=['C', 'D', 'F', 'U', 'E',
     lbl = np.array(hf.get('labels'))
     formant_features = np.array(hf.get('features'))
 
+    #print(lbl[0:20, Ix.scenario])
+    #exit()
+
     for sn in range(1, len(storage_files)):
         if (os_path.isfile(storage_files[sn])==False) or (int(os_path.getsize(storage_files[sn]))<8000):
             raise Exception ("Formants features for this training set are not extracted yet. Call 'run_train_and_test' for extracting formant features.")
@@ -160,9 +164,11 @@ def import_mutiple_HDFs(storage_files, deselect_labels=['C', 'D', 'F', 'U', 'E',
         lbl = np.concatenate((lbl, np.array(hf.get('labels'))))
         formant_features = np.concatenate((formant_features, np.array(hf.get('features'))))
 
+    select_scence = 1
+    if(len(lbl)>1500): select_scence = 2    #don't select scripted from big databases (IEMOCAP, MS-Improv)
 
-
-    conditions =  (lbl[:, Ix.accent]==1) #RAVDESS has 2 accents (1=speech, 2=song), select only speech.
+    conditions =  ((lbl[:, Ix.scenario]>=select_scence) ) #RAVDESS has 2 scenarios (1=speech, 2=song), select only speech.
+    #scenario: 0=unknown, 1=script, 2=improv, 3=radio/TV, 4=elicited, 5=natural, 6=script-in-improv
     
     if(deselect_labels!=None):
         if(len(deselect_labels) > 0):

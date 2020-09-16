@@ -95,7 +95,13 @@ def Test(classifier_model, X_features):
     
     
     return y_pred
+    '''
     
+            'RF02': RandomForestClassifier(max_depth=10, n_estimators=100, max_features=10),
+            'RF03': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=7),
+            'RF04': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=10),
+            'RF05': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=10),
+    '''
 
 class ClassifierObject(object):
 
@@ -105,12 +111,8 @@ class ClassifierObject(object):
             'SVC3': SVC(decision_function_shape='ovr', kernel='rbf', C=0.1, gamma='scale', probability=False, class_weight='balanced'),
             'SVC4': SVC(decision_function_shape='ovr', kernel='rbf', C=0.01, gamma='scale', probability=False, class_weight='balanced'),
             'SVC5': SVC(kernel='poly', degree=3, C=1,  gamma='scale', random_state=0, probability=False),
-            'RF02': RandomForestClassifier(max_depth=5, n_estimators=50, max_features=5),
             'RF01': RandomForestClassifier(max_depth=10, n_estimators=100, max_features=7),
-            'RF01': RandomForestClassifier(max_depth=10, n_estimators=100, max_features=10),
             'RF03': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=7),
-            'RF04': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=10),
-            'RF04': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=10),
             'RF04': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=10),
             'KNN1': KNeighborsClassifier(n_neighbors=20, weights='uniform', leaf_size=30, p=2, metric='minkowski'),
             'MLP1': MLPClassifier(alpha=1, max_iter=2000, validation_fraction=0.3, hidden_layer_sizes=(400,100,50,), )
@@ -256,7 +258,7 @@ def select_features(train_features, Y_labels_train, K_SD=-0.5, mode=0):
 Phoneme clustering
 '''
 
-def make_clusters(cluster_n1, frames_formants, clustering_method=0, print_quality_scores=0, save_plot=0):
+def make_clusters(cluster_n1, frames_formants, clustering_method=0, print_quality_scores=0, save_plot=False):
 
     
     #duration = timer() - start
@@ -265,13 +267,25 @@ def make_clusters(cluster_n1, frames_formants, clustering_method=0, print_qualit
 
     max_frames = frames_formants.shape[1]
     X_Clips_N = frames_formants.shape[0]
-    combined_frames = np.zeros((X_Clips_N*max_frames, frames_formants.shape[2]), dtype=np.uint16)
+    
+    max_selected_clips = int(X_Clips_N*0.2)
+    if(max_selected_clips < 50): max_selected_clips = int(X_Clips_N*0.8)
+    random_select = []
+    import random
+    while (len(random_select) < (max_selected_clips)):
+        n = random.randint(0,X_Clips_N-1)
+        if(n not in random_select):
+            random_select.append(n)
+    
+    max_selected_clips = len(random_select)
+
+    combined_frames = np.zeros((max_selected_clips*max_frames, frames_formants.shape[2]), dtype=np.uint16)
 
     #print("Clustering data shape:", combined_frames.shape)
 
-    for i in range(0, X_Clips_N):
+    for i in range(0, max_selected_clips):
         for k in range(0, max_frames):
-            combined_frames[(i*max_frames) + k, :] = frames_formants[i, k,:]
+            combined_frames[(i*max_frames) + k, :] = frames_formants[random_select[i], k,:]
     
     clustModel = None
 
@@ -283,25 +297,25 @@ def make_clusters(cluster_n1, frames_formants, clustering_method=0, print_qualit
     metric='euclidean'
     if(clustering_method==0):
         from sklearn.cluster import MiniBatchKMeans
-        clustModel = MiniBatchKMeans(cluster_n1, init='k-means++', batch_size=2000, max_iter=500, n_init=5, compute_labels=False)
+        clustModel = MiniBatchKMeans(cluster_n1, init='k-means++', batch_size=2000, max_iter=500, n_init=5, compute_labels=save_plot)
         clustModel.fit(combined_frames)
         clustModel.fit(combined_frames)
 
     elif(clustering_method==1):
         from sklearn.cluster import MiniBatchKMeans
-        clustModel = MiniBatchKMeans(cluster_n1, init='k-means++', batch_size=1000, max_iter=500, n_init=5)
+        clustModel = MiniBatchKMeans(cluster_n1, init='k-means++', batch_size=1000, max_iter=500, n_init=5, compute_labels=save_plot)
         clustModel.fit(combined_frames)
         clustModel.fit(combined_frames)
     
     elif(clustering_method==2):
         from sklearn.cluster import MiniBatchKMeans
-        clustModel = MiniBatchKMeans(cluster_n1, init='k-means++', batch_size=2000, max_iter=500, n_init=10)
+        clustModel = MiniBatchKMeans(cluster_n1, init='k-means++', batch_size=2000, max_iter=500, n_init=10, compute_labels=save_plot)
         clustModel.fit(combined_frames)
         clustModel.fit(combined_frames)
     
     elif(clustering_method==3):
         from sklearn.cluster import MiniBatchKMeans
-        clustModel = MiniBatchKMeans(cluster_n1, init='random', batch_size=1000, max_iter=500, n_init=10)
+        clustModel = MiniBatchKMeans(cluster_n1, init='random', batch_size=1000, max_iter=500, n_init=10, compute_labels=save_plot)
         clustModel.fit(combined_frames)
         clustModel.fit(combined_frames)
         
@@ -381,26 +395,40 @@ def make_clusters(cluster_n1, frames_formants, clustering_method=0, print_qualit
         ax3 = fig.add_subplot(2, 2, 3)
         ax4 = fig.add_subplot(2, 2, 4)
 
-        ax1.set_xlim([600, 1700])
-        ax2.set_xlim([600, 1700])
-        ax3.set_xlim([600, 1700])
-        ax4.set_xlim([600, 1700])
+        #ax1.set_xlim([600, 1700])
+        ax2.set_ylim([64000, 66000])
+        #ax3.set_xlim([65000, 70000])
+        ax4.set_ylim([0, 2000])
         
         ax1.scatter(combined_frames[:, 0], combined_frames[:, 1], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
         ax1.set_xlabel('f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
         ax1.set_ylabel('p\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
 
-        ax2.scatter(combined_frames[:, 0], combined_frames[:, 4], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
+        #ax2.scatter(combined_frames[:, 0], combined_frames[:, 4], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
+        #ax2.set_xlabel('f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+        #ax2.set_ylabel('f\u2081', fontsize=12, fontstyle='italic', fontfamily='serif')
+
+        ax2.scatter(combined_frames[:, 0], combined_frames[:, 2], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
         ax2.set_xlabel('f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
-        ax2.set_ylabel('f\u2081', fontsize=12, fontstyle='italic', fontfamily='serif')
+        ax2.set_ylabel('Diff-f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
 
-        ax3.scatter(combined_frames[:, 0], combined_frames[:, 2], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
-        ax3.set_xlabel('f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
-        ax3.set_ylabel('w\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+        #ax3.scatter(combined_frames[:, 0], combined_frames[:, 2], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
+        #ax3.set_xlabel('f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+        #ax3.set_ylabel('w\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
 
-        ax4.scatter(combined_frames[:, 0], combined_frames[:, 3], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
+        ax3.scatter(combined_frames[:, 1], combined_frames[:, 3], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
+        ax3.set_xlabel('p\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+        ax3.set_ylabel('Diff-p\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+
+        #ax4.scatter(combined_frames[:, 0], combined_frames[:, 3], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
+        #ax4.set_xlabel('f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+        #ax4.set_ylabel('d\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+
+        
+        ax4.scatter(combined_frames[:, 0], combined_frames[:, 2], c=clustModel.labels_, cmap=plt.cm.nipy_spectral, alpha=0.25)
         ax4.set_xlabel('f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
-        ax4.set_ylabel('d\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+        ax4.set_ylabel('Diff-f\u2080', fontsize=12, fontstyle='italic', fontfamily='serif')
+
 
         plt.savefig("clusters_" + str(cluster_n1) + "_" + str(clustering_method) + ".png", dpi=300)
         #plt.show()
@@ -420,7 +448,7 @@ def formants_slope(frames_formants, frames_len, distance):
     max_clips = frames_formants.shape[0]
     max_frames = frames_formants.shape[1]
     #max_formants = 2
-    slope_ftr = np.zeros((max_clips, max_frames, 6,))
+    slope_ftr = np.zeros((max_clips, max_frames, 4,))
     half_dist = int(distance/2)
     
     for i in range(0, max_clips):
@@ -429,9 +457,9 @@ def formants_slope(frames_formants, frames_len, distance):
             slope_ftr[i, frm, 1] = np.mean(frames_formants[i, frm:frm+distance, 1])
             #slope_ftr[i, frm, 2] = np.mean(frames_formants[i, frm:frm+distance, 4])
             
-            slope_ftr[i, frm, 2] = np.abs(np.mean(frames_formants[i, frm:frm+half_dist, 0]) - np.mean(frames_formants[i, frm+half_dist:frm+distance, 0]))
-            slope_ftr[i, frm, 3] = np.abs(np.mean(frames_formants[i, frm:frm+half_dist, 1]) - np.mean(frames_formants[i, frm+half_dist:frm+distance, 1]))
-            #slope_ftr[i, frm, 5] = np.abs(np.mean(frames_formants[i, frm:frm+half_dist, 4]) - np.mean(frames_formants[i, frm+half_dist:frm+distance, 4]))
+            slope_ftr[i, frm, 2] = (np.mean(frames_formants[i, frm:frm+half_dist, 0]) - np.mean(frames_formants[i, frm+half_dist:frm+distance, 0]))
+            slope_ftr[i, frm, 3] = np.mean(frames_formants[i, frm:frm+half_dist, 1]) - np.mean(frames_formants[i, frm+half_dist:frm+distance, 1])
+            #slope_ftr[i, frm, 5] = (np.abs(np.mean(frames_formants[i, frm:frm+half_dist, 4]) - np.mean(frames_formants[i, frm+half_dist:frm+distance, 4])))
 
     return slope_ftr
 
@@ -490,13 +518,13 @@ def Train_model(models_save_file, X_formants_train, Y_labels_train, X_frame_lens
     `Trained_classifiers`= `ClassifierObject()`, includes multiple trained classifiers, it doesn't need to be passed, function 'Test_model' reads this automatically from `models_save_file`
     '''
 
-    print("Clustering (inst.)", inst_phoneme_types)
+    print("Clustering (inst.)", inst_phoneme_types, X_formants_train.shape)
     inst_clust_models = []
     for pt in range(0, len(inst_phoneme_types)):
         #print("Clustering phonemes (inst.) using training clips, Type:", inst_phoneme_types[pt])
 
         #for clm in range(7):
-        pt_clustModel = make_clusters(inst_phoneme_types[pt], X_formants_train, clustering_method=0, print_quality_scores=0, save_plot=0)
+        pt_clustModel = make_clusters(inst_phoneme_types[pt], X_formants_train, clustering_method=0, print_quality_scores=0, save_plot=False)
         
         #exit()
 
@@ -505,11 +533,12 @@ def Train_model(models_save_file, X_formants_train, Y_labels_train, X_frame_lens
 
     train_slope_ftrs = formants_slope(X_formants_train, X_frame_lens_train, distance=g_dist)
 
-    print("Clustering (diff.)", diff_phoneme_types)
+
+    print("Clustering (diff.)", diff_phoneme_types, train_slope_ftrs.shape)
     diff_clust_models = []
     for pt in range(0, len(diff_phoneme_types)):
         #print("Clustering phonemes (diff.) using training clips, Type:", diff_phoneme_types[pt])
-        slope_clustModel = make_clusters(diff_phoneme_types[pt], train_slope_ftrs, clustering_method=0, print_quality_scores=0, save_plot=0)
+        slope_clustModel = make_clusters(diff_phoneme_types[pt], train_slope_ftrs, clustering_method=0, print_quality_scores=0, save_plot=False)
         
         diff_clust_models.append(slope_clustModel)
 
@@ -536,6 +565,7 @@ def Train_model(models_save_file, X_formants_train, Y_labels_train, X_frame_lens
 
     trainclips_phoneme_count[:, all_ftrs - 1] = X_frame_lens_train
 
+    print("Selecting features, K_SD:", K_SD)
     selected_features = select_features(trainclips_phoneme_count, Y_labels_train, K_SD=K_SD, mode=0)
 
     ClassifierObj = ClassifierObject()
@@ -545,7 +575,7 @@ def Train_model(models_save_file, X_formants_train, Y_labels_train, X_frame_lens
 
     #Save trained models to pickle file
     import pickle
-    tuple_objects = (inst_phoneme_types, diff_phoneme_types, g_dist, inst_clust_models, diff_clust_models, selected_features, Trained_classifiers)
+    tuple_objects = (inst_phoneme_types, diff_phoneme_types, g_dist, inst_clust_models, diff_clust_models, selected_features, Trained_classifiers, np.unique(Y_labels_train))
     pickle.dump(tuple_objects, open(models_save_file, 'wb'))
 
     #print("Training complete")
@@ -579,7 +609,7 @@ def Test_model(models_save_file, X_formants_test, Y_labels_test, X_frame_lens_te
 
     #Load clusering and ML models from pickle file
     import pickle
-    inst_phoneme_types, diff_phoneme_types, g_dist, inst_clust_models, diff_clust_models, selected_features, Trained_classifiers = pickle.load(open(models_save_file, 'rb'))
+    inst_phoneme_types, diff_phoneme_types, g_dist, inst_clust_models, diff_clust_models, selected_features, Trained_classifiers, trained_unique_labels = pickle.load(open(models_save_file, 'rb'))
 
     test_slope_ftrs = formants_slope(X_formants_test, X_frame_lens_test, distance=g_dist)
     max_clips_test = X_formants_test.shape[0]
@@ -607,7 +637,7 @@ def Test_model(models_save_file, X_formants_test, Y_labels_test, X_frame_lens_te
 
     for index, (name, classifier) in enumerate(Trained_classifiers.items()):
         y_pred = Test(classifier, testclips_phoneme_count[:, selected_features])
-        conf_matrix = create_conf_matrix(Y_labels_test, y_pred, np.unique(Y_labels_test))
+        conf_matrix = create_conf_matrix(Y_labels_test, y_pred, trained_unique_labels)
         uar, war = get_UAR_WAR(conf_matrix)
         #print(name, uar, war)
         classifiers_results.append({'classifier' : name, 'confusion' : conf_matrix, 'UAR' : uar, 'WAR' : war})

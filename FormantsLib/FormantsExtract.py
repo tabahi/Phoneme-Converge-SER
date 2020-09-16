@@ -1,6 +1,4 @@
-import numpy as np
-from scipy import signal as signallib
-from numba import jit #install numba to speed up the execution
+
 """
 -----
 Author: Abdul Rehman
@@ -31,6 +29,10 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
+import numpy as np
+from scipy import signal as signallib
+from numba import jit #install numba to speed up the execution
+from pydub import AudioSegment
 
 @jit(nopython=True) 
 def get_lowest_positions(array_y, n_positions):
@@ -297,8 +299,13 @@ def Extract_formant_descriptors(fft_x, fft_y, formants=2, f_min=30, f_max=4000):
     
 
 
-
-
+def normalize_volume(wav_file_path):
+    sound = AudioSegment.from_file(wav_file_path, "wav")
+    change_in_dBFS = -20.0 - sound.dBFS
+    normalized_sound =  sound.apply_gain(change_in_dBFS)
+    temp_file_path = wav_file_path + ".x"
+    normalized_sound.export(temp_file_path, format="wav")
+    return temp_file_path
 
 def Extract_wav_file_formants(wav_file_path, window_length=0.025, window_step=0.010, emphasize_ratio=0.7, norm=0, f0_min=30, f0_max=4000, max_frames=400, formants=3, formant_decay=0.5):
     '''
@@ -486,17 +493,20 @@ def Extract_files_formant_features(array_of_clips, features_save_file, window_le
         dset_label = hf.create_dataset('labels', (total_clips, 11),  dtype='u2')
         dset_features = hf.create_dataset('features', (total_clips, max_frames, formants*4), dtype='u2')
         
-        print("Clip", "i", "of", "Total", "SpeakerID", "Accent", "Sex", "Emotion")
+        print("Clip", "i", "of", "Total", "SpeakerID", "Scenario", "Sex", "Emotion")
         for index, clip in enumerate(array_of_clips):
             try:
-                print("Clip ", index+1, "of", total_clips, clip.speaker_id, clip.accent, clip.sex, clip.emotion)
+                print("Clip ", index+1, "of", total_clips, clip.speaker_id, clip.scenario, clip.sex, clip.emotion_cat)
                 array_frames_by_features = np.zeros((max_frames, formants*4), dtype=np.uint16)
                 #print(clip.filepath)
-                array_frames_by_features, frame_count, signal_length, trimmed_length = Extract_wav_file_formants(clip.filepath, window_length, window_step, emphasize_ratio, norm, f0_min, f0_max, max_frames, formants)
-                clipfile_size = int(os.path.getsize(clip.filepath)/1000)
+                temp_file_path = normalize_volume(clip.filepath)
 
+                array_frames_by_features, frame_count, signal_length, trimmed_length = Extract_wav_file_formants(temp_file_path, window_length, window_step, emphasize_ratio, norm, f0_min, f0_max, max_frames, formants)
+                clipfile_size = int(os.path.getsize(clip.filepath)/1000)
+                
+                os.remove(temp_file_path)
                 dset_features[index] = array_frames_by_features
-                dset_label[index] = [clip.speaker_id, clip.accent, ord(clip.sex), ord(clip.emotion), int(clip.intensity), int(clip.statement), int(clip.repetition), int(frame_count), int(signal_length*1000), int(trimmed_length*1000), clipfile_size]
+                dset_label[index] = [clip.speaker_id, clip.scenario, ord(clip.sex), ord(clip.emotion_cat), int(clip.intensity_cat), int(clip.statement), int(clip.repetition), int(frame_count), int(signal_length*1000), int(trimmed_length*1000), clipfile_size]
                 processed_clips += 1
             except Exception as e:
                 print (e)

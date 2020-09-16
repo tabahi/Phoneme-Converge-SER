@@ -7,3 +7,5 @@ notes.txt
 *.csv
 results/
 expreriments.py
+.vscode
+*.code-workspace

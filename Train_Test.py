@@ -11,13 +11,13 @@ import FormantsLib.FormatsHDFread as HDFread
 import SER_phonemes_learn.PhonemeSER as PhonemeSER
 
                               
-def split_train_n_test(features, labels, scheme='single-random', test_size=0.2, folds_n=5, test_speakers=2, features_2=None, labels_2=None): 
+def split_train_n_test(features, labels, scheme='single-random', test_size=0.2, folds_n=5, test_speakers=5, features_2=None, labels_2=None): 
     '''
     Parameters:
 
     features: array-like, dtype=int16, shape = [total_clips, max_frames, formants*4]. Array of clip frames formant features;
 
-    labels: array-like, dtype=int16, shape = [total_clips, 11]. Each clip has 11 labels including speaker_id, emotions, accent, frame_count, trimmed_length etc.
+    labels: array-like, dtype=int16, shape = [total_clips, 11]. Each clip has 11 labels including speaker_id, emotions, scenario, frame_count, trimmed_length etc.
 
     scheme : string. Choose one of these {'L1SO', 'LMSO',  'k-folds', 'single-random', 'cross-corpus'}, default: 'single-random',;
 
@@ -40,11 +40,11 @@ def split_train_n_test(features, labels, scheme='single-random', test_size=0.2, 
     if(scheme=='L1SO'):
         
         print("Validation scheme:", 'L1SO')
-        unique_speakers = np.unique(labels[:, SER_DB.Ix.speaker_id])
+        unique_speakers = np.unique(labels[:, HDFread.Ix.speaker_id])
 
         for s_id in range(len(unique_speakers)):
-            select_train = np.where(labels[:, SER_DB.Ix.speaker_id]!=unique_speakers[s_id])
-            select_test = np.where(labels[:, SER_DB.Ix.speaker_id]==unique_speakers[s_id])
+            select_train = np.where(labels[:, HDFread.Ix.speaker_id]!=unique_speakers[s_id])
+            select_test = np.where(labels[:, HDFread.Ix.speaker_id]==unique_speakers[s_id])
 
             features_train.append(features[select_train] )
             labels_train.append(labels[select_train] )
@@ -54,7 +54,7 @@ def split_train_n_test(features, labels, scheme='single-random', test_size=0.2, 
     elif(scheme=='LMSO'):
         
         print("Validation scheme:", 'LMSO', test_speakers)
-        unique_speakers = np.unique(labels[:, SER_DB.Ix.speaker_id])
+        unique_speakers = np.unique(labels[:, HDFread.Ix.speaker_id])
         total_speakers = len(unique_speakers)
         folds = int(round(total_speakers/test_speakers))
 
@@ -64,9 +64,9 @@ def split_train_n_test(features, labels, scheme='single-random', test_size=0.2, 
             if edx > total_speakers: edx = total_speakers
             this_fold_speakers = unique_speakers[stx:edx]
 
-            conditions = labels[:, SER_DB.Ix.speaker_id] == this_fold_speakers[0]
+            conditions = labels[:, HDFread.Ix.speaker_id] == this_fold_speakers[0]
             for ts in this_fold_speakers:
-                conditions1 =  (labels[:, SER_DB.Ix.speaker_id] == ts)
+                conditions1 =  (labels[:, HDFread.Ix.speaker_id] == ts)
                 conditions = conditions | conditions1
             
             select_train = np.where(conditions != True)
@@ -111,6 +111,8 @@ def split_train_n_test(features, labels, scheme='single-random', test_size=0.2, 
             labels_test.append(labels_2)
         else:
             raise Exception ("Cross-corpus missing arguments: 'features_2' and 'labels_2'")
+    else:
+        raise Exception ("Invalid argument. Select any of there validation schemes: 'L1SO', 'LMSO',  'k-folds', 'single-random', 'cross-corpus'")
 
 
     return features_train, labels_train, features_test, labels_test
@@ -149,7 +151,7 @@ def make_model_filename(DB_names, val_scheme, test_size, folds_n, test_speakers,
 
 
 
-def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', test_size=0.2, folds_n=5, test_speakers=5, Nm_inst=[32, 64], Nm_diff=[32, 64], K_SD=0, g_dist=8, window_length=0.025, window_step=0.01, emphasize_ratio=0.65, norm=0, deselect_labels=None, db_names_paths_2=None):
+def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', test_size=0.2, folds_n=5, test_speakers=2, Nm_inst=[32, 64], Nm_diff=[32, 64], K_SD=0, g_dist=8, window_length=0.025, window_step=0.01, emphasize_ratio=0.65, norm=0, deselect_labels=None, db_names_paths_2=None):
     '''
     Run training and testing functions with the set parameters
 
@@ -211,7 +213,7 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
         features_HDF_file = make_formants_filename(db_name_path['DB'], window_length, window_step, emphasize_ratio, norm)
 
         if (os.path.isfile(features_HDF_file)==False) or (int(os.path.getsize(features_HDF_file))<8000):
-            array_of_clips = SER_DB.create_DB_file_objects(db_name_path['DB'], db_name_path['path'])
+            array_of_clips = SER_DB.create_DB_file_objects(db_name_path['DB'], db_name_path['path'], deselect=deselect_labels)
             #Extract and save formant features of clips in array to an HDF file along with labels (labels are included in file_objects)
             processed_n = Extract_formants(array_of_clips, features_HDF_file, window_length, window_step, emphasize_ratio, norm, f0_min=30, f0_max=4000, max_frames=800, formants=3)
             if(processed_n==0):
@@ -233,7 +235,7 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
                 features_HDF_file = make_formants_filename(db_name_path['DB'], window_length, window_step, emphasize_ratio, norm)
 
                 if (os.path.isfile(features_HDF_file)==False) or (int(os.path.getsize(features_HDF_file))<8000):
-                    array_of_clips = SER_DB.create_DB_file_objects(db_name_path['DB'], db_name_path['path'])
+                    array_of_clips = SER_DB.create_DB_file_objects(db_name_path['DB'], db_name_path['path'], deselect=deselect_labels)
                     processed_n = Extract_formants(array_of_clips, features_HDF_file, window_length, window_step, emphasize_ratio, f0_min=30, f0_max=4000, max_frames=800, formants=3)
                     if(processed_n==0):
                         raise Exception("No files to process. Make sure DB directory path and filenames are in the correct format.")
@@ -253,20 +255,20 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
     folds_results = []
     features_counts = []
     
-    Xtr, Ytr, Xts, Yts = split_train_n_test(features, labels, scheme=val_scheme, test_speakers=5, folds_n=folds_n, test_size=test_size, features_2=features2, labels_2=labels2)
+    Xtr, Ytr, Xts, Yts = split_train_n_test(features, labels, val_scheme, test_size, folds_n, test_speakers, features_2=features2, labels_2=labels2)
 
     for fold in range(0, len(Xtr)):
         print ("Fold:", fold, "Train:", Xtr[fold].shape[0], "Test:", Xts[fold].shape[0])
 
         print("Training")
         if((val_scheme!='cross-corpus') or ((val_scheme=='cross-corpus') and (os.path.isfile(models_save_file)==False))):
-            PhonemeSER.Train_model(models_save_file, Xtr[fold], Ytr[fold][:, SER_DB.Ix.emotion], Ytr[fold][:, SER_DB.Ix.frame_count], Nm_inst, Nm_diff, K_SD, g_dist)
+            PhonemeSER.Train_model(models_save_file, Xtr[fold], Ytr[fold][:, HDFread.Ix.emotion], Ytr[fold][:, HDFread.Ix.frame_count], Nm_inst, Nm_diff, K_SD, g_dist)
         else:
             print("Skipping training because model file already exists.")
-
+        
         print("Testing")
         print("Using model file:", models_save_file, "\t Test samples:", Xts[fold].shape[0])
-        classifiers_results, ft_count = PhonemeSER.Test_model(models_save_file, Xts[fold], Yts[fold][:, SER_DB.Ix.emotion], Yts[fold][:, SER_DB.Ix.frame_count])
+        classifiers_results, ft_count = PhonemeSER.Test_model(models_save_file, Xts[fold], Yts[fold][:, HDFread.Ix.emotion], Yts[fold][:, HDFread.Ix.frame_count])
         
     
         folds_results.append(classifiers_results)
@@ -300,14 +302,18 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
 
 def main():
 
+
+    
+
+
     #Few parameters:
     pt = [16, 32, 64, 128]  #total phoneme clusters, add more than one integer to this list to create multiple models
-    K_SD = 0              #float, -1 to +1, feature selection parameters, less K_SD selects more featues
-    norm = 0            #Normalization of mel-filter banks
+    K_SD = 0.75             #float, -1 to +1, feature selection parameters, less K_SD selects more featues
+    norm = 0            #Normalization of mel-filter banks, doesn't work at 1 (9-12-2020)
 
     
     # List of DB names and directory where wav files are stored:
-    db_names_paths = [{'DB': "EmoDB", 'path' : "C:\\DB\\EMO-DB\\wav\\"},]
+    db_names_paths = [{'DB': "RAVDESS", 'path' : "C:\\DB\\RAVDESS_COPY2\\"},]
     # Can add more than one DBs to the list
 
     '''
@@ -316,23 +322,25 @@ def main():
     {'DB': "RAVDESS", 'path' : "C:\\DB\\RAVDESS_COPY2\\"},
     {'DB': "IEMOCAP", 'path' : "C:\\DB\\IEMOCAP_noVideo\\"},
     {'DB': "ShemoDB", 'path' : "C:\\DB\\shemo\\"},
-    {'DB': "DEMoS", 'path' : "C:\\DB\\wav_DEMoS\\DEMOS\\"}
+    {'DB': "DEMoS", 'path' : "C:\\DB\\wav_DEMoS\\"},
+    {'DB': "MSPIMPROV", 'path' : "C:\\DB\\MSP-IMPROV\\"}
     '''
     
-    run_train_and_test(db_names_paths, "results.csv", val_scheme='k-folds', test_size=0.2, folds_n=5, Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=6, window_length=0.025, window_step=0.010, emphasize_ratio=0.65, norm=norm, deselect_labels=None)
-
+    deselect_labels=['D','F','U','E','R', 'C', 'G', 'B', 'X']
+    run_train_and_test(db_names_paths, "results.csv", val_scheme='k-folds', test_size=0.2, folds_n=5, test_speakers=2, Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=6, window_length=0.025, window_step=0.010, emphasize_ratio=0.65, norm=norm, deselect_labels=['X'])
+    
     exit()
-
+    
     
     # For cross-corpus validation:
     # Training sets:
-    db_names_paths = [{'DB': "RAVDESS", 'path' : "C:\\DB\\RAVDESS_COPY2\\"},]
+    db_names_paths = [{'DB': "MSPIMPROV", 'path' : "C:\\DB\\MSP-IMPROV\\"},]
 
     #Testing sets
-    db_names_paths_2 = [{'DB': "IEMOCAP", 'path' : "C:\\DB\\IEMOCAP_noVideo\\"},]
+    db_names_paths_2 =  [{'DB': "IEMOCAP", 'path' : "C:\\DB\\IEMOCAP_noVideo\\"},]
 
     
-    deselect_labels=['D','F','U','E','R', 'C', 'G', 'B']
+    deselect_labels=['D','F','U','E','R', 'C', 'G', 'B', 'X']
 
     run_train_and_test(db_names_paths, "results.csv", val_scheme='cross-corpus', Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=6, window_length=0.025, window_step=0.01, emphasize_ratio=0.65, norm=norm, deselect_labels=deselect_labels, db_names_paths_2=db_names_paths_2)
     
