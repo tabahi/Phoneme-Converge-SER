@@ -273,7 +273,8 @@ def create_IEMOCAP_file_objects(db_path, deselect=['F', 'D', 'U', 'R', 'X']):
                                 #rate_mean = rate_mean / np.sum(rate_mean)
                                 
                                 #if( len(np.where(rate_mean>=0.667)[0])==1 ) : 
-                                array_of_clips = np.append(array_of_clips, this_clip_info)
+                                if this_clip_info.scenario == 2:
+                                    array_of_clips = np.append(array_of_clips, this_clip_info)
 
                                 break
 

@@ -149,6 +149,26 @@ def make_model_filename(DB_names, val_scheme, test_size, folds_n, test_speakers,
         os.makedirs('data')
     return "data\\model_" + DB_names + "_" + str(val_scheme) + str(test_size)+ "_"+ str(folds_n) + "_"+ str(test_speakers) +"_" + str(K_SD) + "_" + "I".join(str(x) for x in Nm_inst) + "D".join(str(x) for x in Nm_diff) + str(g_dist) + str(window_length) + str(window_step) + str(emphasize_ratio)+ '_' + str(norm)+ ".pkl"
 
+def new_type_of_labels(db_name_path, deselect_labels, labels):
+    array_of_clips = SER_DB.create_DB_file_objects(db_name_path['DB'], db_name_path['path'], deselect=deselect_labels)
+    if(len(array_of_clips)!=labels.shape[0]): raise Exception("Can't edit labels. Array size mismatch. Recreate HDF to create labels data with new (and perhaps changed) conditions.")
+
+    import csv
+    file_i = []
+    file_C6 = []
+    with open('C:\\DB\\IEMOCAP_relabel\\C4.csv') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            file_i.append(row[list(row.keys())[0]]) #error while using 'i' as key
+            file_C6.append(row['C4'])
+
+    for i in range (0, labels.shape[0]):
+        labels[i, HDFread.Ix.emotion] = int(file_C6[file_i.index(os.path.basename(array_of_clips[i].filepath))])
+
+    print(labels[0, HDFread.Ix.speaker_id], labels[0, HDFread.Ix.emotion], labels[0, HDFread.Ix.scenario])
+    print(array_of_clips[0].speaker_id, ord(array_of_clips[0].emotion_cat), array_of_clips[0].scenario)
+    return labels
+    
 
 
 def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', test_size=0.2, folds_n=5, test_speakers=2, Nm_inst=[32, 64], Nm_diff=[32, 64], K_SD=0, g_dist=8, window_length=0.025, window_step=0.01, emphasize_ratio=0.65, norm=0, deselect_labels=None, db_names_paths_2=None):
@@ -211,7 +231,7 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
     for db_name_path in db_names_paths:
         #HDF storage file path in which formant characteristics are stored
         features_HDF_file = make_formants_filename(db_name_path['DB'], window_length, window_step, emphasize_ratio, norm)
-
+        print(features_HDF_file)
         if (os.path.isfile(features_HDF_file)==False) or (int(os.path.getsize(features_HDF_file))<8000):
             array_of_clips = SER_DB.create_DB_file_objects(db_name_path['DB'], db_name_path['path'], deselect=deselect_labels)
             #Extract and save formant features of clips in array to an HDF file along with labels (labels are included in file_objects)
@@ -224,7 +244,9 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
     #Read formant features and labels from the HDF file
     features, labels, u_speakers, u_classes  = HDFread.import_mutiple_HDFs(features_HDF_files, deselect_labels=deselect_labels)
 
-
+    
+    #labels = new_type_of_labels(db_names_paths[0], deselect_labels, labels)
+        
     HDFread.print_database_stats(labels)
 
     features2, labels2 = None, None
@@ -303,17 +325,15 @@ def run_train_and_test(db_names_paths, results_csv, val_scheme='single-random', 
 def main():
 
 
-    
-
 
     #Few parameters:
     pt = [16, 32, 64, 128]  #total phoneme clusters, add more than one integer to this list to create multiple models
-    K_SD = 0.75             #float, -1 to +1, feature selection parameters, less K_SD selects more featues
+    K_SD = -0.5             #float, -1 to +1, feature selection parameters, less K_SD selects more featues
     norm = 0            #Normalization of mel-filter banks, doesn't work at 1 (9-12-2020)
 
     
     # List of DB names and directory where wav files are stored:
-    db_names_paths = [{'DB': "RAVDESS", 'path' : "C:\\DB\\RAVDESS_COPY2\\"},]
+    db_names_paths = [{'DB': "IEMOCAP", 'path' : "C:\\DB\\IEMOCAP_noVideo\\"},]
     # Can add more than one DBs to the list
 
     '''
@@ -327,7 +347,7 @@ def main():
     '''
     
     deselect_labels=['D','F','U','E','R', 'C', 'G', 'B', 'X']
-    run_train_and_test(db_names_paths, "results.csv", val_scheme='k-folds', test_size=0.2, folds_n=5, test_speakers=2, Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=6, window_length=0.025, window_step=0.010, emphasize_ratio=0.65, norm=norm, deselect_labels=['X'])
+    run_train_and_test(db_names_paths, "results.csv", val_scheme='L1SO', test_size=0.2, folds_n=5, test_speakers=2, Nm_inst=pt, Nm_diff=pt, K_SD=K_SD, g_dist=6, window_length=0.025, window_step=0.010, emphasize_ratio=0.65, norm=norm, deselect_labels=deselect_labels)
     
     exit()
     

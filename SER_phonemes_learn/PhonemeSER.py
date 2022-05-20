@@ -47,6 +47,8 @@ from sklearn.ensemble import RandomForestClassifier
 #from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 #from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.tree import DecisionTreeClassifier
 
 
 '''
@@ -81,6 +83,65 @@ def get_UAR_WAR(confusion_matrix):
     return round(uar*100, 2), round(war*100, 2)
 
 
+@jit(nopython=True) # Set "nopython" mode for best performance, equivalent to @njit
+def balance_data(X, Y):
+
+    u_labels = np.unique(Y)
+    print(u_labels)
+    if(X.shape[0] != Y.shape[0]): raise Exception("X and Y length mismatch")
+    #print("Balancing data for labels", [(chr(int(lbl)) if lbl > 50 else lbl) for lbl in u_labels])
+    cat_sizes = np.zeros(len(u_labels))
+    
+
+    for u1 in range(0, len(u_labels)):   cat_sizes[u1] = len(np.where(Y == u_labels[u1])[0])
+    print(cat_sizes)
+
+    
+    max_size = int(np.max(cat_sizes))
+    
+    for u in range(0, len(u_labels)):
+        cat_Y_sel = np.where(Y == u_labels[u])[0]
+        #np.random.shuffle(cat_Y_sel)    #shuffle after label selection
+        u_size = len(cat_Y_sel)
+        cat_Y = Y[cat_Y_sel]
+        cat_X = X[cat_Y_sel]
+        it = 0
+
+        Y_u_new = np.empty((max_size - u_size,))
+        X_u_new = np.empty((max_size - u_size, X.shape[1]))
+        
+        Y_new = np.empty((Y.shape[0] + max_size - u_size, ))
+        X_new = np.empty((X.shape[0] + max_size - u_size, X.shape[1]))
+
+        while(u_size < max_size):
+            #new_Y = np.append(new_Y, cat_Y[it])
+            Y_u_new[max_size - u_size - 1] = cat_Y[it]
+            #concatenate workaround
+            X_u_new[max_size - u_size - 1, :] = cat_X[it]
+            #new_X = np.concatenate([new_X, np.array([cat_X[it]])])
+            
+            u_size += 1
+            it += 1
+            if (it >= cat_sizes[u]): it = 0
+        
+        #print(max_size, X.shape, cat_X.shape, X_u_new.shape)
+
+        Y_new[0:X.shape[0]] = Y
+        Y_new[X.shape[0]:] = Y_u_new
+        Y = Y_new
+        Y_new = None
+        
+        X_new[0:X.shape[0], :] = X
+        X_new[X.shape[0]:, :] = X_u_new
+        X = X_new
+        X_new = None
+
+    for u1 in range(0, len(u_labels)):   cat_sizes[u1] = len(np.where(Y == u_labels[u1])[0])
+    print(cat_sizes)
+    
+    return X, Y
+
+
 '''
 Classifier functions and objects
 '''
@@ -106,13 +167,14 @@ def Test(classifier_model, X_features):
 class ClassifierObject(object):
 
     classifiers = {
+        
             'SVC1': SVC(decision_function_shape='ovr', kernel='rbf', C=10, gamma='scale', probability=False, class_weight='balanced',),
             'SVC2': SVC(decision_function_shape='ovr', kernel='rbf', C=1, gamma='scale', probability=False, class_weight='balanced'),
             'SVC3': SVC(decision_function_shape='ovr', kernel='rbf', C=0.1, gamma='scale', probability=False, class_weight='balanced'),
             'SVC4': SVC(decision_function_shape='ovr', kernel='rbf', C=0.01, gamma='scale', probability=False, class_weight='balanced'),
             'SVC5': SVC(kernel='poly', degree=3, C=1,  gamma='scale', random_state=0, probability=False),
             'RF01': RandomForestClassifier(max_depth=10, n_estimators=100, max_features=7),
-            'RF03': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=7),
+            'RF03': RandomForestClassifier(max_depth=30, n_estimators=10, max_features=7),
             'RF04': RandomForestClassifier(max_depth=30, n_estimators=100, max_features=10),
             'KNN1': KNeighborsClassifier(n_neighbors=20, weights='uniform', leaf_size=30, p=2, metric='minkowski'),
             'MLP1': MLPClassifier(alpha=1, max_iter=2000, validation_fraction=0.3, hidden_layer_sizes=(400,100,50,), )
@@ -124,6 +186,8 @@ class ClassifierObject(object):
 
         from sklearn import preprocessing
         X_features = preprocessing.scale(X_features, with_mean=False, with_std=True, axis=0)
+
+        X_features, Y_labels = balance_data(X_features, np.array(Y_labels, float))
 
         #from sklearn.model_selection import train_test_split
         #X_train, X_test, Y_train, Y_test = train_test_split(X_features, Y_labels, test_size = validation, random_state = 100)

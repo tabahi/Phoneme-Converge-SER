@@ -29,6 +29,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
+from os.path import basename
 import numpy as np
 from scipy import signal as signallib
 from numba import jit #install numba to speed up the execution
