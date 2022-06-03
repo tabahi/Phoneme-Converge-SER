@@ -21,7 +21,7 @@ pip install PhonemeSER
 
 ## Pre-trained model
 
-Pre-trained models are available on [Onedrive](https://1drv.ms/u/s!Aht5RfGbNivUgU83aOBlJH1Nz7VC?e=gJCXqo). Download any one of them and run with `PhonemeSER.model_predict_wav_file(model_file, test_wav)`.
+[Download pre-trained models from Onedrive](https://1drv.ms/u/s!Aht5RfGbNivUgU83aOBlJH1Nz7VC?e=gJCXqo) and run with `PhonemeSER.model_predict_wav_file(model_file, test_wav)`.
 
 The biggest model `model_EmoD.RAVD.IEMO.Shem.DEMo.MSP` is 364 MB and performs at around 67% accuracy. Read more details about the performance in the paper [here](https://www.sciencedirect.com/science/article/abs/pii/S0020025521001584).
 
