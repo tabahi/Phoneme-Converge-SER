@@ -1,0 +1,13 @@
+LICENSE.md
+PhonemeSER.py
+Train_test.py
+setup.py
+FormantsLib/FormantsExtract.py
+FormantsLib/FormatsHDFread.py
+PhonemeSER.egg-info/PKG-INFO
+PhonemeSER.egg-info/SOURCES.txt
+PhonemeSER.egg-info/dependency_links.txt
+PhonemeSER.egg-info/requires.txt
+PhonemeSER.egg-info/top_level.txt
+examples/example.py
+examples/predict.py

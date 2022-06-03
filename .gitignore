@@ -9,3 +9,7 @@ results/
 expreriments.py
 .vscode
 *.code-workspace
+__pycache__/
+*.wav
+.vscode
+dist/

@@ -32,7 +32,7 @@ Dependencies: sklearn (v2.1), numba (v0.45.1), pickle, matplotlib
 """
 
 import numpy as np
-from numba import jit #install numba to speed up the execution
+#from numba import jit #install numba to speed up the execution
 from timeit import default_timer as timer
 
 from sklearn.neural_network import MLPClassifier
@@ -83,7 +83,7 @@ def get_UAR_WAR(confusion_matrix):
     return round(uar*100, 2), round(war*100, 2)
 
 
-@jit(nopython=True) # Set "nopython" mode for best performance, equivalent to @njit
+#@jit(nopython=True) # Set "nopython" mode for best performance, equivalent to @njit
 def balance_data(X, Y):
 
     u_labels = np.unique(Y)
@@ -210,7 +210,7 @@ class ClassifierObject(object):
 Feature selection
 '''
 
-@jit(nopython=True) 
+#@jit(nopython=True) 
 def get_top_positions(array_y, n_positions):
     order = array_y.argsort()
     ranks = order.argsort() #ascending
@@ -507,7 +507,7 @@ def make_clusters(cluster_n1, frames_formants, clustering_method=0, print_qualit
 
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def formants_slope(frames_formants, frames_len, distance):
     max_clips = frames_formants.shape[0]
     max_frames = frames_formants.shape[1]
@@ -528,7 +528,7 @@ def formants_slope(frames_formants, frames_len, distance):
     return slope_ftr
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def count_phonemes_in_clip(phonemes_array, frames_len, phoneme_types):
     phoneme_count = np.zeros((phoneme_types,))
     
@@ -714,7 +714,7 @@ def Test_model(models_save_file, X_formants_test, Y_labels_test, X_frame_lens_te
     return classifiers_results, n_selected_features
 
 
-def Test_model_wav_file(models_save_file, test_file):
+def model_predict_wav_file(models_save_file, test_file):
     '''
     Predict emotion class of a WAV file
 
@@ -743,11 +743,13 @@ def Test_model_wav_file(models_save_file, test_file):
     #print("Testing")
     #Load clusering and ML models from pickle file
     import pickle
-    inst_phoneme_types, diff_phoneme_types, g_dist, inst_clust_models, diff_clust_models, selected_features, Trained_classifiers = pickle.load(open(models_save_file, 'rb'))
+
+    inst_phoneme_types, diff_phoneme_types, g_dist, inst_clust_models, diff_clust_models, selected_features, Trained_classifiers, trained_unique_labels = pickle.load(open(models_save_file, 'rb'))
+
 
     test_slope_ftrs = formants_slope(X_formants_test, X_frame_lens_test, distance=g_dist)
     max_clips_test = X_formants_test.shape[0]
-    
+
     all_ftrs = int(np.sum(inst_phoneme_types) +  np.sum(diff_phoneme_types) + 1) #+ np.sum(comb_phoneme_type**2))
     testclips_phoneme_count = np.zeros((max_clips_test, all_ftrs,), dtype=np.float)
 
@@ -767,13 +769,14 @@ def Test_model_wav_file(models_save_file, test_file):
 
     testclips_phoneme_count[:, all_ftrs - 1] = X_frame_lens_test
 
-    classifiers_results = []
+    classifiers_results = {}
 
     for index, (name, classifier) in enumerate(Trained_classifiers.items()):
         y_pred = Test(classifier, testclips_phoneme_count[:, selected_features])
         
-        print(name, [chr(x) for x in y_pred][0])
-        classifiers_results.append({'classifier' : name, 'Prediction' : [chr(x) for x in y_pred][0]})
+        #print(name, [chr(int(x)) for x in y_pred][0])
+        classifiers_results[name] = [chr(int(x)) for x in y_pred][0]
+
     
     return classifiers_results
 

@@ -6,12 +6,113 @@ Includes [formantfeatures](https://github.com/tabahi/formantfeatures)  — forke
 
 This code uses Scikit-learn's K-mean and generic classifiers to learn the emotional classification of speech clips. First, the formant characteristics [(extracted using formantfeatures)](https://github.com/tabahi/formantfeatures) are used to create cluster's of similar phonemes. Then SVM is trained to classify clips' emotions using the phoneme (cluster label) occurence rates as input.
 
-Version: Origin-2020-05-14-b
+
+## Install Package
+
+Version: 1.0.3
+
+```cmd
+pip install PhonemeSER
+```
 
 ## SER model training
+
 Training function `PhonemeSER.Train_model()` uses [K-means clustering (scikit-learn)](https://scikit-learn.org/stable/modules/clustering.html#k-means) to label the similar phonological units as the same phonemes. Then phoneme occurrences in whole DB are counted for each clip and occurrence rate is used to train [classifiers](https://scikit-learn.org/stable/modules/svm.html#svm-classification).
 
-Once the model is trained and saved to a file, it can be tested by passing the testing set to `PhonemeSER.Test_model()`
+Once the model is trained and saved to a file, it can be tested by passing the testing set to `PhonemeSER.model_predict_wav_file(model_file, test_wav)`
+
+
+## Pre-trained model
+
+Pre-trained models are available on [Onedrive](https://1drv.ms/u/s!Aht5RfGbNivUgU83aOBlJH1Nz7VC?e=gJCXqo).
+
+The biggest model `model_EmoD.RAVD.IEMO.Shem.DEMo.MSP` is 364 MB and performs at around 67% accuracy. Read more details about the performance in the paper [here](https://www.sciencedirect.com/science/article/abs/pii/S0020025521001584).
+
+
+```python
+
+
+import PhonemeSER
+
+
+# Make sure pre-trained model file is downloaded and saved in the right path.
+model_file = "../path/model_EmoD.RAVD.IEMO.Shem.DEMo.MSPI_single-random0.1_5_2_-0.5_16I32I64I12816D32D64D12860.0250.010.65_0.pkl"
+
+test_wav = "263771femaleprotagonist.wav"
+
+multi_classifiers_results = PhonemeSER.model_predict_wav_file(model_file, test_wav)
+print(multi_classifiers_results)
+
+'''
+Output:
+{'SVC1': 'S', 'SVC2': 'S', 'SVC3': 'S', 'SVC4': 'S', 'SVC5': 'S', 'RF01': 'S', 'RF03': 'N', 'RF04': 'S', 'KNN1': 'S', 'MLP1': 'S'}
+
+where SVC1-MLP1 are different sklearn models.
+and S,N,H,A are labels for Sad, Neutral, Happy, and Angry respectively.
+'''
+
+```
+
+## Pre-trained model performance
+
+
+Testing log for model file: `model_EmoD.RAVD.IEMO.Shem.DEMo.MSPI_single-random0.1_5_2_-0.5_16I32I64I12816D32D64D12860.0250.010.65_0.pkl`. This model is trained on a combination of 6 multi-lingual datasets with 9:1 random split for training and validation.
+
+```
+data\Formants_EmoDB_25_10_650_0.hdf
+data\Formants_RAVDESS_25_10_650_0.hdf
+data\Formants_IEMOCAP_25_10_650_0.hdf
+data\Formants_ShemoDB_25_10_650_0.hdf
+data\Formants_DEMoS_25_10_650_0.hdf
+data\Formants_MSPIMPROV_25_10_650_0.hdf
+Reading dataset from file: ['data\\Formants_EmoDB_25_10_650_0.hdf', 'data\\Formants_RAVDESS_25_10_650_0.hdf', 'data\\Formants_IEMOCAP_25_10_650_0.hdf', 'data\\Formants_ShemoDB_25_10_650_0.hdf', 'data\\Formants_DEMoS_25_10_650_0.hdf', 'data\\Formants_MSPIMPROV_25_10_650_0.hdf']
+Clips count: 11682
+Total clips 11682
+wav files size (MB) 3315.16
+Total raw length (min) 763.85
+Total trimmed length (min) 750.3
+Avg raw length (s) 3.92
+Avg trimmed length (s) 3.85
+Avg. frame count 357.26
+Male Female Clips 6285 5397
+Unique speakers:  68
+Speakers id:  [ 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24
+ 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48
+ 49 50 51 52 53 54 55 56 57 58 59 60 61 63 64 65 66 67 68 69]
+Emotion classes:  4
+Unique emotions:  ['A', 'H', 'N', 'S']
+Emotion N clips Total(min) Trimmed(min)
+A        1846    113.63          110.23
+H        3174    193.21          190.31
+N        4743    317.52          312.05
+S        1919    139.48          137.7
+Validation scheme: single-random 0.1
+Fold: 0 Train: 10513 Test: 1169
+Training
+Clustering (inst.) [16, 32, 64, 128] (10513, 800, 12)
+Clustering (diff.) [16, 32, 64, 128] (10513, 800, 4)
+Counting phonemes
+Selecting features, K_SD: -0.5
+Training Classifiers (samples, features): (10513, 481)
+[65. 72. 78. 83.]
+[1651. 2858. 4260. 1744.]
+[4260. 4260. 4260. 4260.]
+Testing
+Using model file: data\model_EmoD.RAVD.IEMO.Shem.DEMo.MSPI_single-random0.1_5_2_-0.5_16I32I64I12816D32D64D12860.0250.010.65_0.pkl        Test samples: 1169
+Classifiers: 10         Mean features: 481
+SVC1    UAR: 69.82  WAR: 70.83  Tested samples: 1169
+SVC2    UAR: 68.07  WAR: 66.38  Tested samples: 1169
+SVC3    UAR: 60.19  WAR: 56.29  Tested samples: 1169
+SVC4    UAR: 50.74  WAR: 45.59  Tested samples: 1169
+SVC5    UAR: 67.7  WAR: 66.98   Tested samples: 1169
+RF01    UAR: 63.77  WAR: 61.51  Tested samples: 1169
+RF03    UAR: 62.1  WAR: 63.73   Tested samples: 1169
+RF04    UAR: 67.94  WAR: 70.4   Tested samples: 1169
+KNN1    UAR: 62.3  WAR: 59.28   Tested samples: 1169
+MLP1    UAR: 66.71  WAR: 69.8   Tested samples: 1169
+Finished 'run_train_and_test' for DB EmoD.RAVD.IEMO.Shem.DEMo.MSPI
+```
+
 
 ------------
 
@@ -156,34 +257,23 @@ with respective directory paths of the DB wav files. Importing of each DB is pro
 This function automatically assumes many parameters, e.g., classifiers (=all), formants HDF file name (autogenerated), model file name (autogenerated)
 
 
-## Single file test
 
-Once a model is trained and saved to a pickle file, it can be used to predict the label of single WAV file:
-```python
-test_wav = "test.wav"
-
-import SER_phonemes_learn.PhonemeSER as PhonemeSER
-# Make sure an already trained model file is available.
-model_file = "data/model_file.pkl"
-PhonemeSER.Test_model_wav_file(model_file, test_wav)
-'''
-Output:
-Classifier, Label
-SVC1 H
-SVC2 H
-SVC3 H
-SVC4 H
-SVC5 A
-RF02 A
-RF01 H
-RF03 H
-RF04 H
-KNN1 H
-MLP1 A
-Done
-'''
-```
 ------------------
 
-## Collaboration
-Collaborations, issues and improvements are welcome. Currently, we are working on an RNN model to detect the recurrent patterns of phonemes in the wild. The major update will be forked into a separate branch from this (origin) model.
+## Citations
+
+```tex
+@article{LIU2021309,
+title = {Speech emotion recognition based on formant characteristics feature extraction and phoneme type convergence},
+journal = {Information Sciences},
+volume = {563},
+pages = {309-325},
+year = {2021},
+issn = {0020-0255},
+doi = {https://doi.org/10.1016/j.ins.2021.02.016},
+url = {https://www.sciencedirect.com/science/article/pii/S0020025521001584},
+author = {Zhen-Tao Liu and Abdul Rehman and Min Wu and Wei-Hua Cao and Man Hao},
+keywords = {Speech, Emotion recognition, Formants extraction, Phonemes, Clustering, Cross-corpus},
+abstract = {Speech Emotion Recognition (SER) has numerous applications including human-robot interaction, online gaming, and health care assistance. While deep learning-based approaches achieve considerable precision, they often come with high computational and time costs. Indeed, feature learning strategies must search for important features in a large amount of speech data. In order to reduce these time and computational costs, we propose pre-processing step in which speech segments with similar formant characteristics are clustered together and labeled as the same phoneme. The phoneme occurrence rates in emotional utterances are then used as the input features for classifiers. Using six databases (EmoDB, RAVDESS, IEMOCAP, ShEMO, DEMoS and MSP-Improv) for evaluation, the level of accuracy is comparable to that of current state-of-the-art methods and the required training time was significantly reduced from hours to minutes.}
+}
+```

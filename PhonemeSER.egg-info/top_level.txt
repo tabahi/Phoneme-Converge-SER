@@ -1,0 +1,6 @@
+FormantsLib/FormantsExtract
+FormantsLib/FormatsHDFread
+PhonemeSER
+Train_test
+examples/example
+examples/predict

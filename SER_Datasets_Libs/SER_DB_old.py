@@ -7,9 +7,8 @@ sex: 'M', 'F'
 
 scenario: 0=unknown, 1=script, 2=improv, 3=radio/TV, 4=elicited, 5=natural, 6=script-in-improv
 
-emotion_cat: {'N':'neutral', 'H':'happy', 'S':'sad', 'A':'anger',  'F':'fear', 'D':'disgust', 'U':'surprise', 'C':'calm', 'R':'frustuated', 'E':'excited', 'Y':'happy-excited', 'G':'guilty', 'T': 'contempt', 'X': 'unknown'}
+emotion_cat: {'N':'neutral', 'H':'happy', 'S':'sad', 'A':'anger',  'F':'fear', 'D':'disgust', 'U':'surprise', 'C':'calm', 'R':'frustuated', 'E':'excited', 'Y':'happy-excited', 'G':'guilty', 'X': 'unknown'}
 
-2021-05-10 Added MSP-Podcast
 
 2020-05-24 Tabahi Abdul Rehman
 
@@ -32,15 +31,6 @@ class Clip_file_Class(object):
     emotion_cat = None      # categorical
     intensity_cat = None    # categorical
 
-    #anger, happy, sad, fear, frustrated, surprised, curious/openness
-    anger = None        # dimensional
-    happy = None        # dimensional
-    sad = None          # dimensional
-    fear = None   # dimensional
-    frustrated = None   # dimensional
-    surprised = None   # dimensional
-    openness = None   # dimensional
-
     valance = None      # dimensional
     arousal = None      # dimensional
     dominance = None    # dimensional
@@ -56,7 +46,6 @@ class Clip_file_Class(object):
     
     n_raters = None
     n_possible_emotions = None
-    raters_cat_agreements = None
     raters_labels_cat = None # includes emotion_cat (0 or 1 for each category) by each rater
     raters_labels_dim = None # includes valance, arousal, dominance by each rater
 
@@ -81,13 +70,9 @@ class Clip_file_Class(object):
         
         if(n_raters):
             self.n_raters = n_raters
-            self.raters_cat_agreements = 0
             self.n_possible_emotions = n_possible_emotions
-            self.raters_labels_cat = np.zeros((n_raters, self.n_possible_emotions,), dtype=float)
-            self.raters_labels_dim = np.zeros((n_raters, 4,), dtype=float)
-        else:
-            self.n_raters = 0
-            self.raters_cat_agreements = 1
+            self.raters_labels_cat = np.zeros((n_raters, self.n_possible_emotions,), dtype=np.uint8)
+            self.raters_labels_dim = np.zeros((n_raters, 4,), dtype=np.uint8)
 
 
 
@@ -148,8 +133,6 @@ def create_RAVDESS_file_objects(db_path, deselect=None):
     #scenario_format = {'1':'Speech', '2':'Song'}
     scenario_format = {'1':'Speech'}
     emotion_cats_format = {'N':'01', 'C':'02', 'H':'03', 'S':'04', 'A':'05', 'F':'06', 'D':'07', 'U':'08'}
-    #emotion_cats_valence = {'N':'03', 'C':'03', 'H':'04', 'S':'02', 'A':'01', 'F':'02', 'D':'02', 'U':'05'}
-    #emotion_cats_arousal = {'N':'02', 'C':'01', 'H':'04', 'S':'01', 'A':'05', 'F':'04', 'D':'02', 'U':'05'}
     intensity_cat_format = {'1':'01', '2':'02'}
     statement_format = {'1':'01', '2':'02'}
     repetition_format = {'1':'01', '2':'02'}
@@ -165,7 +148,6 @@ def create_RAVDESS_file_objects(db_path, deselect=None):
             sex = 'M'
             if((spkr_id % 2)==0):
                 sex = 'F'
-            
 
             for emotion_cat in emotion_cats_format:
                 for intensity_cat in intensity_cat_format:
@@ -206,19 +188,17 @@ def create_IEMOCAP_file_objects(db_path, deselect=['F', 'D', 'U', 'R', 'X']):
     '''
     print("Creating file info objects")
     
-    
     sessions = {'01':'Session1', '02':'Session2', '03':'Session3', '04':'Session4', '05':'Session5'}
     
-    #scenarios = {'1':'script','2':'impro'} #only selecting improv
     scenarios = {'1':'script','2':'impro'}
     emotion_cats_format = {'N':'neu', 'H':'hap', 'S':'sad', 'A':'ang',  'F':'fea', 'D':'dis', 'U':'sur', 'R':'fru', 'Y':'exc', 'X':'xxx'}
     # Add  'Y':'exc' for merging Happiness and Excitement
     # Excluded emotion_cats: 'F':'fea', 'D':'dis', 'U':'sur', 'R':'fru', 'E':'exc'
     #emotion_catal content 10 cats - angry, happy, sad, neutral, frustrated, excited, fearful, disgusted, excited, other	
-    sel_emo = ['A', 'H', 'N', 'S']
+
     raters_id = {'C-E1':0, 'C-E2': 1, 'C-E3': 2, 'C-E4': 3, 'C-E5':4,'C-E6':5, 'C-F1': 6, 'C-F2': 7, 'C-F3': 8, 'C-M1': 9, 'C-M3': 10, 'C-M5': 11,  'A-E1': 12, 'A-E2': 13,'A-E3': 14, 'A-E4': 15, 'A-E5': 16, 'A-E6': 17, 'A-F1': 18,  'A-F2': 19, 'A-F3': 20, 'A-M1': 21, 'A-M3': 22, 'A-M5': 23}
 
-    non_default_emo_cats = 0
+    
     array_of_clips = np.array([])
 
     for sess in sessions:
@@ -235,14 +215,15 @@ def create_IEMOCAP_file_objects(db_path, deselect=['F', 'D', 'U', 'R', 'X']):
                 for line_no in range(1, len(cat_file_lines)):
                     cat_line = cat_file_lines[line_no]
                     splitted = cat_line.split()
+
                     if (len(cat_file_lines[line_no-1]) < 2) &  (len(splitted) > 5): # detect first line of each entry
                         for emo in emotion_cats_format:
                             
 
-                            if((splitted[4]==emotion_cats_format[emo]) and  (emo not in deselect)):
+                            if(splitted[4]==emotion_cats_format[emo]) and  (emo not in deselect):
                                 _emox = emo
-                                #if (emo == 'Y'):    #change excitement to happy
-                                #    _emox = 'H'
+                                if (emo == 'Y'):    #change excitement to happy
+                                    _emox = 'H'
                                     
                                 emotion_cat = _emox
                                 valance = float(''.join(i for i in splitted[-3] if i.isdigit() or (i=='.') ))
@@ -283,101 +264,44 @@ def create_IEMOCAP_file_objects(db_path, deselect=['F', 'D', 'U', 'R', 'X']):
                                             r_dominance = int('0'.join(i for i in splits_2[6] if i.isdigit() ))
                                         
 
-                                        this_clip_info.raters_labels_dim[rater_id] = np.array([r_valance, r_arousal, r_dominance, 0], float)
+                                        this_clip_info.raters_labels_dim[rater_id] = np.array([r_valance, r_arousal, r_dominance, 0], np.uint8)
                                         
                                     
                                     next_line += 1
 
+                                #rate_mean = np.mean(this_clip_info.raters_labels_cat, axis=0)
+                                #rate_mean = rate_mean / np.sum(rate_mean)
                                 
-                                select_non_zero_cat = np.where(this_clip_info.raters_labels_cat!=np.zeros((len(emotion_cats_format))) )[0]
-                                
-                                #Edit: mean changed to sum, 2020-04-13
-                                rater_cat_mean = np.sum(this_clip_info.raters_labels_cat[select_non_zero_cat], axis=0)
-                                rater_cat_mean /= np.max(rater_cat_mean)
-                                rater_cat_mean *= 5
-
-                                #print(rater_cat_mean)
-                                rater_cat_mean[list(emotion_cats_format.keys()).index('N')]
-
-                                
-                                this_clip_info.anger = rater_cat_mean[list(emotion_cats_format.keys()).index('A')]
-                                this_clip_info.happy = rater_cat_mean[list(emotion_cats_format.keys()).index('H')]
-                                this_clip_info.sad = rater_cat_mean[list(emotion_cats_format.keys()).index('S')]
-                                this_clip_info.fear = rater_cat_mean[list(emotion_cats_format.keys()).index('F')]
-                                this_clip_info.frustrated = rater_cat_mean[list(emotion_cats_format.keys()).index('R')]
-                                this_clip_info.surprised = rater_cat_mean[list(emotion_cats_format.keys()).index('U')]
-                                this_clip_info.openness = rater_cat_mean[list(emotion_cats_format.keys()).index('Y')]  #bad formula
-                                
-                                #if (openness==1): openness = 0
-
-                                #print(anger, happy, sad, fear, frustrated, surprised, openness)
-                                #print(np.std(this_clip_info.raters_labels_cat[select_non_zero_cat], axis=0))
-                                
-                                select_non_zero_dim = np.where(this_clip_info.raters_labels_dim!=np.array([0,0,0,0]))[0]
-                                rater_dim_mean = np.mean(this_clip_info.raters_labels_dim[select_non_zero_dim], axis=0) if (select_non_zero_dim.size > 0) else np.array([0,0,0,0])
-                                
-                                this_clip_info.valance = rater_dim_mean[0]
-                                this_clip_info.arousal = rater_dim_mean[1]
-                                this_clip_info.dominance = rater_dim_mean[2]
-
-                                rater_cat_mean /= np.sum(rater_cat_mean)
-                                this_clip_info.raters_cat_agreements = np.max(rater_cat_mean)
-                                this_emo = list(emotion_cats_format)[np.where(rater_cat_mean==np.max(rater_cat_mean))[0][0]]
-                                
-                                
-
-                                if(this_clip_info.emotion_cat != this_emo): non_default_emo_cats += 1
-                                    
-                                this_clip_info.emotion_cat = this_emo
-                                if (this_clip_info.emotion_cat == 'Y'):  this_clip_info.emotion_cat = 'H'
-                                
-                                if (this_clip_info.emotion_cat in sel_emo):
-                                    sel_mode = 0
-                                    if(sel_mode==1):
-                                        rater_dim_std = np.std(this_clip_info.raters_labels_dim[select_non_zero_dim], axis=0)
-                                        #       if selecting based on std of dimensional labels
-                                        if( rater_dim_std[0] < 0.2 and rater_dim_std[1] < 0.9 and rater_dim_std[2] < 0.9 ) :
-                                            array_of_clips = np.append(array_of_clips, this_clip_info)
-                                    elif(sel_mode==2):
-                                        #       if selecting based on rater's mean of category labels
-                                        
-                                        if( len(np.where(this_clip_info.raters_cat_agreements>0.66)[0])>=1 ) :
-                                            #print(this_clip_info.filepath, this_clip_info.emotion_cat)
-                                            array_of_clips = np.append(array_of_clips, this_clip_info)
-                                    else:
-                                        #select all
-                                        array_of_clips = np.append(array_of_clips, this_clip_info)
+                                #if( len(np.where(rate_mean>=0.667)[0])==1 ) : 
+                                if this_clip_info.scenario == 2:
+                                    array_of_clips = np.append(array_of_clips, this_clip_info)
 
                                 break
-    print('non_default_emo_cats', non_default_emo_cats)
+
     print("Total Clips", len(array_of_clips))
-    
     
     if(len(array_of_clips)<1): raise Exception("No clips found")  
     return array_of_clips
 
 
-def create_MSPIMPROV_file_objects(db_path, deselect=['X']):
+def create_MSPIMPROV_file_objects(db_path, deselect=None):
 
     print("Creating file info objects")
 
     array_of_clips = np.array([])
 
     #scenario: 0=unknown, 1=script, 2=improv, 3=radio/TV, 4=elicited, 5=natural, 6=script-in-improv
-    #scenarios = {'R':1, 'S':2, 'P':5, 'T':6}
-    scenarios = {'R':1, 'S':2, 'T':6}
+    scenarios = {'R':1, 'S':2, 'P':5, 'T':6}
 
     emotion_cats_format = {'N':'N', 'H':'H', 'S':'S', 'A':'A',} #main emotions that are already complied from averaging of individual raters
     raters_cats_format = {'N':'Neutral', 'H':'Happy', 'S':'Sad', 'A':'Angry', 'U': 'Surprised', 'E' : 'Excited', 'F' : 'Fearful', 'P' : 'Depressed', 'R' :'Frustrated', 'D' : 'Disgusted', 'X' : 'Other'}   #these are used to compile the rating my own way
 
-    sel_emo = ['A', 'H', 'N', 'S']
+
     eval_file = os.path.join(db_path, "Evalution.txt")
-    
+        
     with open(eval_file) as eval_file_txt:
         content = eval_file_txt.readlines()
-
-    non_default_emo_cats = 0
-    list_of_filenames = []
+    
     eval_file_lines = [x.strip() for x in content]
 
     for line_no in range(0, len(eval_file_lines)):
@@ -385,9 +309,6 @@ def create_MSPIMPROV_file_objects(db_path, deselect=['X']):
         if(".avi;" in eval_file_lines[line_no]):
             
             splitted = eval_file_lines[line_no].split(';')
-            wavfilename= splitted[0][4:]
-            wavfilename = 'MSP-'+wavfilename[:-3]+'wav'
-            
 
             file_labels = splitted[0][3:-4].split('-')
             sex = file_labels[3][0:1]
@@ -405,69 +326,41 @@ def create_MSPIMPROV_file_objects(db_path, deselect=['X']):
             try:
                 dominance = float(''.join(i for i in splitted[4] if i.isdigit() or (i=='.') ))
             except:
-                dominance = 3
+                pass
             naturalness = None
             try:
                 naturalness = float(''.join(i for i in splitted[5] if i.isdigit() or (i=='.') ))
             except:
-                naturalness = 3
+                pass
                 
             # Each session has 2 speakers, we assign: Female = SessionID+0, Male = SessionID+1, 
             speaker_id = ((int(session_no)-1)*2) + (0 if (sex=='F') else 1) + 1
             
             
             #print(session_no, scenario, sex, emotion, valance, arousal, dominance, naturalness)
+            wav_files = glob.glob(db_path + 'session' + str(session_no) + '\\S*'+ emotion +'\\' + scene +'\\MSP' +splitted[0][3:-4]+ '.wav')
 
-            if(scene in scenarios) and (emotion in emotion_cats_format) and (emotion_cats_format[emotion] in sel_emo):
-                
-                wav_file = glob.glob(db_path + 'session' + str(session_no) + '\\S*\\'+scene+'\\' + wavfilename)[0]
-            
+            for wav_file in wav_files:
                 this_clip_info = Clip_file_Class(3, wav_file, speaker_id=speaker_id, scenario=int(scenarios[scene]), sex=sex, emotion_cat=emotion_cats_format[emotion], intensity_cat=1, valance=valance, arousal=arousal, dominance=dominance, naturalness=naturalness, statement=sentence, repetition=turn)
             
-                rate_mean = np.zeros((len(raters_cats_format),))
-                # parse individual ratings
-                next_line = line_no + 1
-                while(next_line < len(eval_file_lines) - 1) and (len(eval_file_lines[next_line])>10) and  ("-p" in eval_file_lines[next_line]):
-                    splits_2 = eval_file_lines[next_line].split(';')
-                    
-                    for index, emo_types in enumerate(raters_cats_format):
-                        if(raters_cats_format[emo_types] in splits_2[1].strip()):
-                            rate_mean[index] += 1
-                    #exit()
-                    next_line += 1
+            rate_mean = np.zeros((len(raters_cats_format),))
+            # parse individual ratings
+            next_line = line_no + 1
+            while(next_line < len(eval_file_lines) - 1) and (len(eval_file_lines[next_line])>10) and  ("-p" in eval_file_lines[next_line]):
+                splits_2 = eval_file_lines[next_line].split(';')
                 
-                rater_cat_mean = rate_mean / np.sum(rate_mean)
+                for index, emo_types in enumerate(raters_cats_format):
+                    if(raters_cats_format[emo_types] in splits_2[1].strip()):
+                        rate_mean[index] += 1
+                #exit()
+                next_line += 1
                 
+            rate_mean = rate_mean / np.sum(rate_mean)
+            if( len(np.where(rate_mean>=0.667)[0])==1 ) :
                 this_emo = list(raters_cats_format)[np.where(rate_mean==np.max(rate_mean))[0][0]]
-                if(this_clip_info.emotion_cat != this_emo): non_default_emo_cats += 1
                 this_clip_info.emotion_cat = this_emo
-
-                if(this_clip_info.emotion_cat in emotion_cats_format):
-                    this_clip_info.anger = rater_cat_mean[list(raters_cats_format.keys()).index('A')]
-                    this_clip_info.happy = rater_cat_mean[list(raters_cats_format.keys()).index('H')]
-                    this_clip_info.sad = rater_cat_mean[list(raters_cats_format.keys()).index('S')]
-                    this_clip_info.fear = rater_cat_mean[list(raters_cats_format.keys()).index('F')]
-                    this_clip_info.frustrated = rater_cat_mean[list(raters_cats_format.keys()).index('R')]
-                    this_clip_info.surprised = rater_cat_mean[list(raters_cats_format.keys()).index('U')]
-                    this_clip_info.openness = rater_cat_mean[list(raters_cats_format.keys()).index('E')]
-                    this_clip_info.raters_cat_agreements = np.max(rater_cat_mean)
-                    
-                    sel_mode = 1
-                    filename = os.path.basename(this_clip_info.filepath)
-                    if filename in list_of_filenames:
-                        print("Duplicate", filename, this_clip_info.emotion_cat)
-                        print(eval_file_lines[line_no])
-                        exit()
-                    else:
-                        if(sel_mode==1):
-                            if( this_clip_info.raters_cat_agreements > 0.66 ):
-                                list_of_filenames.append(filename)
-                                array_of_clips = np.append(array_of_clips, this_clip_info)
-                        else:
-                            list_of_filenames.append(filename)
-                            array_of_clips = np.append(array_of_clips, this_clip_info)
-                        
-    print('non_default_emo_cats', non_default_emo_cats)
+                array_of_clips = np.append(array_of_clips, this_clip_info)
+    
     print("Total Clips", len(array_of_clips))
     
     if(len(array_of_clips)<1): raise Exception("No clips found")  
@@ -569,74 +462,7 @@ def create_DEMOS_file_objects(db_path, deselect=['N']):
 
 
 
-
-def create_MSPPODCAST_file_objects(db_path, deselect=['X'], select_part=None):
-
-    print("Creating file info objects")
-
-    array_of_clips = np.array([])
-
-    #scenario: 0=unknown, 1=script, 2=improv, 3=radio/TV, 4=elicited, 5=natural, 6=script-in-improv
-    #scenarios = {'R':1, 'S':2, 'P':5, 'T':6}
-    #MSP podcats scenario = 3=radio/TV
-
-    emotion_cats_format = {'N':'N', 'H':'H', 'S':'S', 'A':'A', 'U':'U', 'F':'F', 'D':'D', 'T':'C', 'X':'O'}
-    # consensus labels, Key_new: Key_in_json
-    '''
-    Primary emotions and the consensus emotion code:
-    Angry		(A)
-    Sad		    (S)
-    Happy		(H)
-    Surprise	(U)
-    Fear		(F)
-    Disgust		(D)
-    Contempt	(C)
-    Neutral		(N)
-    Other		(O)
-    '''
-    
-    labels_concensus_file = os.path.join(db_path, "Labels\\labels_concensus.json")
-    print(labels_concensus_file)
-    import json
-    with open(labels_concensus_file, 'r') as myfile:
-
-        data=myfile.read()
-        jsn = json.loads(data)
-        for u in list(jsn.keys()):
-
-            for emo in emotion_cats_format:
-                            
-
-                if(jsn[u]['EmoClass']==emotion_cats_format[emo]) and  (emo not in deselect):
-            
-                    sex = 'M' if jsn[u]['Gender']=='Male' else 'F'
-                    part = 0
-                    if jsn[u]['Split_Set']=='Train': part=1
-                    elif jsn[u]['Split_Set']=='Validation': part=2
-                    elif jsn[u]['Split_Set']=='Test1': part=3
-                    elif jsn[u]['Split_Set']=='Test2': part=4
-
-                    if(select_part is None) or (jsn[u]['Split_Set']==select_part):
-                        speaker = 0
-                        if(jsn[u]['SpkrID']!='Unknown'): speaker = int(jsn[u]['SpkrID'])
-
-                        wav_file = os.path.join(db_path, "Audios\\" + u)
-                        this_clip_info = Clip_file_Class(6, wav_file, speaker_id=speaker, scenario=3, sex=sex, emotion_cat=emo, intensity_cat=1, valance=float(jsn[u]['EmoVal']), arousal=float(jsn[u]['EmoAct']), dominance=float(jsn[u]['EmoDom']), naturalness=0, statement=part, repetition=1)
-
-                        
-                        array_of_clips = np.append(array_of_clips, this_clip_info)
-                    break
-
-            
-    print("Total Clips", len(array_of_clips))
-    
-    if(len(array_of_clips)<1): raise Exception("No clips found")  
-    return array_of_clips
-
-
-        
-
-def create_DB_file_objects(db_name, db_path, deselect=None, select_part=None):
+def create_DB_file_objects(db_name, db_path, deselect=None):
     '''
     Creates a list of file objected of all the wav files present in the db_path, as long as they are according to the formant of relevant 'db_name's original source
 
@@ -661,8 +487,6 @@ def create_DB_file_objects(db_name, db_path, deselect=None, select_part=None):
     
     db_name="MSPIMPROV", db_path="C:\\DB\\MSP-IMPROV\\";
 
-    db_name="MSPPODCAST", db_path="C:\\DB\\MSP-Podcast\\";
-
     '''
     if(db_name=="EmoDB"):
         return create_EMODB_file_objects(db_path, deselect=deselect)
@@ -678,9 +502,9 @@ def create_DB_file_objects(db_name, db_path, deselect=None, select_part=None):
         return create_DEMOS_file_objects(db_path, deselect=deselect)
     elif(db_name=="MSPIMPROV"): 
         return create_MSPIMPROV_file_objects(db_path, deselect=deselect)
-    elif(db_name=="MSPPODCAST"): 
-        return create_MSPPODCAST_file_objects(db_path, deselect=deselect, select_part=select_part)
         
     
     else: raise Exception("Invalid DB name/key in db_sub_paths")
+
+
 
