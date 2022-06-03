@@ -21,7 +21,7 @@ pip install PhonemeSER
 
 ## Pre-trained model
 
-Pre-trained models are available on [Onedrive](https://1drv.ms/u/s!Aht5RfGbNivUgU83aOBlJH1Nz7VC?e=gJCXqo).
+Pre-trained models are available on [Onedrive](https://1drv.ms/u/s!Aht5RfGbNivUgU83aOBlJH1Nz7VC?e=gJCXqo). Download any one of them and run with `PhonemeSER.model_predict_wav_file(model_file, test_wav)`.
 
 The biggest model `model_EmoD.RAVD.IEMO.Shem.DEMo.MSP` is 364 MB and performs at around 67% accuracy. Read more details about the performance in the paper [here](https://www.sciencedirect.com/science/article/abs/pii/S0020025521001584).
 
@@ -44,7 +44,7 @@ print(multi_classifiers_results)
 Output:
 {'SVC1': 'S', 'SVC2': 'S', 'SVC3': 'S', 'SVC4': 'S', 'SVC5': 'S', 'RF01': 'S', 'RF03': 'N', 'RF04': 'S', 'KNN1': 'S', 'MLP1': 'S'}
 
-where SVC1-MLP1 are different sklearn models.
+where SVC1-MLP1 are different sklearn classifiers.
 and S,N,H,A are labels for Sad, Neutral, Happy, and Angry respectively.
 '''
 
