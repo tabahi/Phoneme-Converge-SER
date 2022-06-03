@@ -48,7 +48,10 @@ where SVC1-MLP1 are different sklearn classifiers.
 and S,N,H,A are labels for Sad, Neutral, Happy, and Angry respectively.
 '''
 
+
 ```
+
+Training parameters for all the models are fixed at `window_length=0.025, window_step=0.01, emphasize_ratio=0.65, f0_min=30, f0_max=4000, max_frames=800, formants=3`... that means it will cut-off any clips longer than 8 seconds (0.01*800). You can use an audio segment cutter library to make smaller chunks of larger audio files.
 
 ## Pre-trained model performance
 
