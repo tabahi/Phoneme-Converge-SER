@@ -1,25 +1,22 @@
 # Speech emotion recognition by phoneme type convergence
 
 
-Includes [formantfeatures](https://github.com/tabahi/formantfeatures)  — forked from:
-<https://github.com/tabahi/formantfeatures>
 
-This code uses Scikit-learn's K-mean and generic classifiers to learn the emotional classification of speech clips. First, the formant characteristics [(extracted using formantfeatures)](https://github.com/tabahi/formantfeatures) are used to create cluster's of similar phonemes. Then SVM is trained to classify clips' emotions using the phoneme (cluster label) occurence rates as input.
+Predict speech emotions for small wav files.
+
+Uses [formantfeatures](https://github.com/tabahi/formantfeatures) to get feature vectors for phoneme k-means clustering. Then Scikit-learn's classifiers are used to learn the emotional classification of based on what type of (learned) phonemes occur most in a clip.
 
 
-## Install Package
+
+## Installation
 
 Version: 1.0.3
+
+Install the python package from [pypip](https://pypi.org/project/PhonemeSER/)
 
 ```cmd
 pip install PhonemeSER
 ```
-
-## SER model training
-
-Training function `PhonemeSER.Train_model()` uses [K-means clustering (scikit-learn)](https://scikit-learn.org/stable/modules/clustering.html#k-means) to label the similar phonological units as the same phonemes. Then phoneme occurrences in whole DB are counted for each clip and occurrence rate is used to train [classifiers](https://scikit-learn.org/stable/modules/svm.html#svm-classification).
-
-Once the model is trained and saved to a file, it can be tested by passing the testing set to `PhonemeSER.model_predict_wav_file(model_file, test_wav)`
 
 
 ## Pre-trained model
@@ -114,7 +111,16 @@ Finished 'run_train_and_test' for DB EmoD.RAVD.IEMO.Shem.DEMo.MSPI
 ```
 
 
+
 ------------
+
+
+## SER model training
+
+Training function `PhonemeSER.Train_model()` uses [K-means clustering (scikit-learn)](https://scikit-learn.org/stable/modules/clustering.html#k-means) to label the similar phonological units as the same phonemes. Then phoneme occurrences in whole DB are counted for each clip and occurrence rate is used to train [classifiers](https://scikit-learn.org/stable/modules/svm.html#svm-classification).
+
+Once the model is trained and saved to a file, it can be tested by passing the testing set to `PhonemeSER.model_predict_wav_file(model_file, test_wav)`
+
 
 ## Dependencies
 
